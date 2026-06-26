@@ -10,7 +10,7 @@ ASSETS = os.path.join(os.path.dirname(__file__), "..", "app", "Resources", "Asse
 # token: (light_hex, light_alpha, dark_hex, dark_alpha)
 # Borders are opacity-based (white in dark / black in light) — the Linear trick.
 TOKENS = {
-    "AccentColor":       ("#5E6AD2", 1.0,  "#7B89F4", 1.0),
+    "AccentColor":       ("#2F6FED", 1.0,  "#5E8CF0", 1.0),
     "BgCanvas":          ("#FBFBFB", 1.0,  "#08090A", 1.0),
     "BgSurface":         ("#FFFFFF", 1.0,  "#0F1011", 1.0),
     "BgSurfaceElevated": ("#FFFFFF", 1.0,  "#161719", 1.0),

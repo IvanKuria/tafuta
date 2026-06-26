@@ -10,7 +10,7 @@ struct MainWindow: View {
     var body: some View {
         NavigationSplitView {
             Sidebar()
-                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
+                .navigationSplitViewColumnWidth(240)   // fixed → smooth collapse animation
         } detail: {
             ResultsView()
         }

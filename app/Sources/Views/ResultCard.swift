@@ -1,6 +1,6 @@
 import SwiftUI
 
-// A moment result: real frame thumbnail + filename + location + badges + relevance.
+// A moment result: real frame thumbnail + filename + relevance pill + Finder action.
 // Click to play; hover for quick actions; right-click for the full menu; drag the frame out.
 struct ResultCard: View {
     @EnvironmentObject var search: SearchCore
@@ -11,28 +11,20 @@ struct ResultCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
             thumbnail
+
             Text(result.videoName)
                 .font(Typo.callout)
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(1).truncationMode(.middle)
 
-            // Tappable location breadcrumb → reveal in Finder.
-            Button { ClipExporter.revealInFinder(result.videoURL) } label: {
-                HStack(spacing: Space.xs) {
-                    Image(systemName: "folder").font(.system(size: 9, weight: .medium))
-                    Text(result.prettyPath).font(Typo.caption)
-                        .lineLimit(1).truncationMode(.head)
+            HStack(spacing: Space.xs) {
+                Pill(text: "\(Int(result.normalizedScore * 100))% match", tint: .brand, filled: true)
+                Spacer(minLength: 0)
+                Button { ClipExporter.revealInFinder(result.videoURL) } label: {
+                    Pill(text: "Finder", systemImage: "folder")
                 }
-                .foregroundStyle(Color.textTertiary)
-            }
-            .buttonStyle(.plain)
-            .help("Reveal in Finder")
-
-            HStack(spacing: Space.s) {
-                ScoreBar(score: result.normalizedScore)
-                Text(String(format: "%.0f%%", result.normalizedScore * 100))
-                    .font(.system(size: 10, weight: .medium).monospacedDigit())
-                    .foregroundStyle(Color.textTertiary)
+                .buttonStyle(.plain)
+                .help("Reveal in Finder")
             }
         }
         .padding(Space.m)
@@ -54,59 +46,57 @@ struct ResultCard: View {
         .contextMenu { menu }
     }
 
+    // Fixed 16:9 frame — overlays must NOT stretch it (use .overlay, not a sizing ZStack).
     private var thumbnail: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Image(nsImage: result.thumbnail)
-                .resizable().aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity)
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-
-            // Hover quick-action bar — monochrome, minimal.
-            if hovering {
+        Image(nsImage: result.thumbnail)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(maxWidth: .infinity)
+            .frame(height: 132)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .overlay(alignment: .topLeading) {
+                if hovering { hoverActions.padding(Space.s) }
+            }
+            .overlay(alignment: .bottomTrailing) {
                 HStack(spacing: Space.xs) {
-                    chipButton("play.fill") { search.play(result) }
-                    chipButton("square.on.square") { search.findSimilar(to: result) }
-                    chipButton("scissors") {
-                        ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in }
-                    }
+                    if !result.durationLabel.isEmpty { badge(result.durationLabel, "clock") }
+                    badge(result.timecode, "scope")
                 }
-                .padding(Space.xs)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-                .softShadow(2)
                 .padding(Space.s)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-
-            // Timecode + duration badges.
-            HStack(spacing: Space.xs) {
-                if !result.durationLabel.isEmpty {
-                    badge(result.durationLabel, icon: "clock")
-                }
-                badge(result.timecode, icon: "scope")
-            }
-            .padding(Space.s)
-        }
     }
 
-    private func badge(_ text: String, icon: String) -> some View {
+    private var hoverActions: some View {
+        HStack(spacing: 2) {
+            iconButton("play.fill") { search.play(result) }
+            iconButton("square.on.square") { search.findSimilar(to: result) }
+            iconButton("scissors") {
+                ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in }
+            }
+        }
+        .padding(3)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+        .softShadow(2)
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+    }
+
+    private func badge(_ text: String, _ icon: String) -> some View {
         HStack(spacing: 3) {
             Image(systemName: icon).font(.system(size: 8, weight: .semibold))
             Text(text).font(.system(size: 11, weight: .semibold).monospacedDigit())
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 6).padding(.vertical, 2)
-        .background(.black.opacity(0.55), in: Capsule())
+        .background(.black.opacity(0.6), in: Capsule())
     }
 
-    private func chipButton(_ icon: String, action: @escaping () -> Void) -> some View {
+    private func iconButton(_ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
-                .frame(width: 24, height: 24)
+                .frame(width: 26, height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

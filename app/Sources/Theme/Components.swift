@@ -23,23 +23,24 @@ extension View {
     }
 }
 
-// Quiet, low-contrast status pill (Linear-style tag).
+// Pill / tag. `filled` tints the background with the accent for prominent metadata.
 struct Pill: View {
     let text: String
     var systemImage: String? = nil
     var tint: Color = .textSecondary
+    var filled: Bool = false
     var body: some View {
         HStack(spacing: Space.xs) {
             if let s = systemImage {
-                Image(systemName: s).font(.system(size: 10, weight: .medium))
+                Image(systemName: s).font(.system(size: 10, weight: .semibold))
             }
-            Text(text).font(.system(size: 11, weight: .medium))
+            Text(text).font(.system(size: 11, weight: .semibold))
         }
-        .foregroundStyle(tint)
+        .foregroundStyle(filled ? tint : .textSecondary)
         .padding(.horizontal, Space.s)
         .padding(.vertical, 3)
-        .background(Color.bgInset, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+        .background(filled ? tint.opacity(0.14) : Color.bgInset, in: Capsule())
+        .overlay(Capsule().strokeBorder(filled ? tint.opacity(0.22) : Color.borderSubtle, lineWidth: 1))
     }
 }
 

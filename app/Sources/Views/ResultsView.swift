@@ -15,7 +15,6 @@ struct ResultsView: View {
                 SearchField()
                 if search.hasResults {
                     StrictnessControl()
-                        .frame(width: 170)
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
@@ -100,18 +99,40 @@ struct ResultsView: View {
     }
 }
 
-// Semantic strictness slider — thresholds out weak matches (validated in Phase 0).
+// Match strictness as a clean dropdown (Codex-style), not a raw slider.
 struct StrictnessControl: View {
     @EnvironmentObject var search: SearchCore
-    var body: some View {
-        HStack(spacing: Space.s) {
-            Text("Strictness").font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.textSecondary)
-            Slider(value: $search.strictness, in: 0.05...0.35)
-                .controlSize(.small)
-                .onChange(of: search.strictness) { _, _ in search.runSearch() }
+
+    private var label: String {
+        switch search.strictness {
+        case ..<0.14: return "Loose"
+        case ..<0.22: return "Balanced"
+        default:      return "Strict"
         }
     }
+
+    var body: some View {
+        Menu {
+            Button("Loose")    { set(0.10) }
+            Button("Balanced") { set(0.18) }
+            Button("Strict")   { set(0.26) }
+        } label: {
+            HStack(spacing: Space.xs) {
+                Image(systemName: "slider.horizontal.3").font(.system(size: 10, weight: .semibold))
+                Text("Match: \(label)").font(.system(size: 11, weight: .semibold))
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
+            }
+            .foregroundStyle(Color.textSecondary)
+            .padding(.horizontal, Space.s).padding(.vertical, 5)
+            .background(Color.bgInset, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private func set(_ v: Double) { search.strictness = v; search.runSearch() }
 }
 
 // Contextual empty state: error → no-library → no-results → ready-with-examples.
