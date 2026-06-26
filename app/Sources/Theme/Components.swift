@@ -43,6 +43,20 @@ struct Pill: View {
     }
 }
 
+// Keyboard-shortcut chip (e.g. ⌘K) — quiet, monospaced, hairline.
+struct KBD: View {
+    let key: String
+    var body: some View {
+        Text(key)
+            .font(.system(size: 11, weight: .medium).monospaced())
+            .foregroundStyle(Color.textTertiary)
+            .padding(.horizontal, 5).padding(.vertical, 1)
+            .background(Color.bgInset, in: RoundedRectangle(cornerRadius: Radius.tag, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.tag, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1))
+    }
+}
+
 // A thin relevance/confidence bar (0...1).
 struct ScoreBar: View {
     let score: Double

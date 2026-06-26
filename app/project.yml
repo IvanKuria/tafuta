@@ -6,6 +6,11 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: true
 
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.2.0"
+
 settings:
   base:
     SWIFT_VERSION: "5.9"
@@ -19,6 +24,8 @@ targets:
   Tafuta:
     type: application
     platform: macOS
+    dependencies:
+      - package: KeyboardShortcuts
     sources:
       - path: Sources
       - path: Resources

@@ -14,4 +14,7 @@ struct SearchResult: Identifiable {
     var timecode: String {
         String(format: "%d:%02d", Int(timestamp) / 60, Int(timestamp) % 60)
     }
+
+    // Cosine ~0.4 is a very strong CLIP match; normalize to 0...1 for display (see docs/PHASE0.md).
+    var normalizedScore: Double { min(max(score / 0.4, 0), 1) }
 }

@@ -47,10 +47,14 @@ enum VideoIndexer {
         let name = url.lastPathComponent
 
         var t = 0.0
+        var lastKept: [Float]?
         while t < duration {
             let time = CMTime(seconds: t, preferredTimescale: 600)
             if let cg = try? gen.copyCGImage(at: time, actualTime: nil),
                let vec = try? embedder.embed(image: cg) {
+                // Scene-change dedup: skip frames near-identical to the last kept one.
+                if let prev = lastKept, Embedder.cosine(prev, vec) > 0.93 { t += 1.0; continue }
+                lastKept = vec
                 let thumb = makeThumbnail(cg)
                 onFrame(IndexedFrame(videoURL: url, videoName: name, timestamp: t,
                                      vector: vec, thumbnail: thumb))

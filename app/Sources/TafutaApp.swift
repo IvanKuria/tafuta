@@ -1,11 +1,16 @@
 import SwiftUI
+import KeyboardShortcuts
+
+extension KeyboardShortcuts.Name {
+    // Global hotkey to summon the launcher from anywhere (user-customizable).
+    static let summon = Self("summonLauncher", default: .init(.k, modifiers: [.command, .shift]))
+}
 
 @main
 struct TafutaApp: App {
     @StateObject private var search = SearchCore()
 
     var body: some Scene {
-        // Main window.
         WindowGroup(id: "main") {
             MainWindow()
                 .environmentObject(search)
@@ -13,14 +18,15 @@ struct TafutaApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1040, height: 700)
+        .defaultPosition(.center)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Quick Search…") { openLauncher() }
+                Button("Quick Search…") { NSApp.activate(ignoringOtherApps: true) }
                     .keyboardShortcut("k", modifiers: .command)
             }
         }
 
-        // Floating launcher (Phase 2: summoned by a global hotkey from anywhere).
+        // Floating launcher — summoned in-app (⌘K) or via the global hotkey.
         Window("Quick Search", id: "launcher") {
             LauncherView()
                 .environmentObject(search)
@@ -29,16 +35,27 @@ struct TafutaApp: App {
         .windowResizability(.contentSize)
         .defaultPosition(.center)
 
-        // Menu-bar status item.
         MenuBarExtra("Tafuta", systemImage: "sparkle.magnifyingglass") {
             MenuBarView()
                 .environmentObject(search)
         }
         .menuBarExtraStyle(.window)
-    }
 
-    private func openLauncher() {
-        // Bridge to AppKit to focus/raise the launcher window.
-        NSApp.activate(ignoringOtherApps: true)
+        Settings {
+            SettingsView()
+        }
+    }
+}
+
+// Settings: let users rebind the global hotkey.
+struct SettingsView: View {
+    var body: some View {
+        Form {
+            LabeledContent("Summon search") {
+                KeyboardShortcuts.Recorder(for: .summon)
+            }
+        }
+        .padding(Space.xl)
+        .frame(width: 380)
     }
 }

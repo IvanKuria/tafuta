@@ -1,36 +1,61 @@
 import SwiftUI
 
-// Main content area: search field, strictness control, and the results grid (or empty state).
+// Main content area: search field, strictness, result grid (or contextual empty state).
 struct ResultsView: View {
     @EnvironmentObject var search: SearchCore
 
-    private let columns = [GridItem(.adaptive(minimum: 220, maximum: 300), spacing: Space.m)]
+    private let columns = [GridItem(.adaptive(minimum: 220, maximum: 300), spacing: Space.l)]
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar + strictness.
+            // Search bar + (progressively disclosed) strictness control.
             HStack(spacing: Space.m) {
                 SearchField()
-                StrictnessControl()
-                    .frame(width: 180)
+                if search.hasResults {
+                    StrictnessControl()
+                        .frame(width: 170)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                }
             }
             .padding(Space.l)
+            .animation(Motion.standard, value: search.hasResults)
 
             Divider().overlay(Color.borderSubtle)
 
-            if search.hasQuery && !search.results.isEmpty {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: Space.m) {
-                        ForEach(search.results) { ResultCard(result: $0) }
-                    }
-                    .padding(Space.l)
-                }
+            if search.hasResults {
+                resultsScroll
             } else {
                 EmptyState()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgCanvas)
+    }
+
+    private var resultsScroll: some View {
+        ScrollView {
+            // Result count / similar-mode breadcrumb.
+            HStack(spacing: Space.s) {
+                if let label = search.similarLabel {
+                    Pill(text: label, systemImage: "square.on.square", tint: .textSecondary)
+                }
+                Text("\(search.results.count) moments")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+                Spacer()
+            }
+            .padding(.horizontal, Space.l)
+            .padding(.top, Space.m)
+
+            LazyVGrid(columns: columns, spacing: Space.l) {
+                ForEach(search.results) { result in
+                    ResultCard(result: result)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                }
+            }
+            .padding(Space.l)
+            .animation(Motion.standard, value: search.results.map(\.id))
+        }
     }
 }
 
@@ -48,18 +73,15 @@ struct StrictnessControl: View {
     }
 }
 
-// Empty / first-run state, branching on whether a library has been indexed yet.
+// Contextual empty state: error → no-library → no-results → ready-with-examples.
 struct EmptyState: View {
     @EnvironmentObject var search: SearchCore
     var body: some View {
         VStack(spacing: Space.l) {
             Spacer()
             if let err = search.loadError {
-                icon("exclamationmark.triangle")
-                title("Couldn’t load the search model")
-                subtitle(err)
+                icon("exclamationmark.triangle"); title("Couldn’t load the search model"); subtitle(err)
             } else if !search.hasIndex {
-                // No library yet → invite to add a folder.
                 icon("plus.rectangle.on.folder")
                 title(search.isIndexing ? "Indexing…" : "Add your videos")
                 subtitle(search.isIndexing
@@ -70,13 +92,10 @@ struct EmptyState: View {
                         .buttonStyle(PrimaryButtonStyle())
                 }
             } else if search.hasQuery {
-                icon("magnifyingglass")
-                title("No matches")
+                icon("magnifyingglass"); title("No matches")
                 subtitle("Try loosening strictness or rephrasing.")
             } else {
-                // Index ready, no query → teach with examples.
-                icon("sparkle.magnifyingglass")
-                title("Search inside your videos")
+                icon("sparkle.magnifyingglass"); title("Search inside your videos")
                 subtitle("\(search.indexedCount) moments ready. Try one:")
                 FlowExamples(examples: search.examples) { search.runExample($0) }
                     .frame(maxWidth: 460)
@@ -92,7 +111,8 @@ struct EmptyState: View {
             .foregroundStyle(Color.textTertiary)
     }
     private func title(_ t: String) -> some View {
-        Text(t).font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.textPrimary)
+        Text(t).font(.system(size: 22, weight: .bold)).tracking(-0.4)
+            .foregroundStyle(Color.textPrimary)
     }
     private func subtitle(_ s: String) -> some View {
         Text(s).font(.system(size: 13)).foregroundStyle(Color.textSecondary)
@@ -100,7 +120,7 @@ struct EmptyState: View {
     }
 }
 
-// Simple wrapping row of example-query pills.
+// Wrapping rows of tappable example-query pills.
 struct FlowExamples: View {
     let examples: [String]
     let onTap: (String) -> Void

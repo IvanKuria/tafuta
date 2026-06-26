@@ -1,13 +1,14 @@
 import SwiftUI
 
-// Left rail: library sources + saved searches (static in Phase 1).
+// Left rail: library sources + saved searches. Reserves the traffic-light drag zone up top.
 struct Sidebar: View {
     @EnvironmentObject var search: SearchCore
+    @State private var selection: String? = "all"
 
     var body: some View {
-        List {
+        List(selection: $selection) {
             Section("Library") {
-                Label("All Videos", systemImage: "square.grid.2x2")
+                Label("All Videos", systemImage: "square.grid.2x2").tag("all")
                 Button { search.addFolder() } label: {
                     Label("Add Folder…", systemImage: "plus.rectangle.on.folder")
                         .foregroundStyle(Color.textSecondary)
@@ -16,18 +17,19 @@ struct Sidebar: View {
             }
             Section("Saved Searches") {
                 Label("Recent moments", systemImage: "clock")
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(Color.textSecondary).tag("recent")
             }
         }
         .listStyle(.sidebar)
+        // Keep the top ~28pt clear so content never collides with the traffic lights.
+        .safeAreaInset(edge: .top) { Color.clear.frame(height: 28) }
         .safeAreaInset(edge: .bottom) {
-            IndexingStatus()
-                .padding(Space.m)
+            IndexingStatus().padding(Space.m)
         }
     }
 }
 
-// Ambient indexing status (incremental availability messaging from the plan).
+// Ambient indexing status (incremental availability messaging).
 struct IndexingStatus: View {
     @EnvironmentObject var search: SearchCore
     var body: some View {

@@ -8,8 +8,8 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
             HStack(spacing: Space.s) {
-                Image(systemName: search.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark.circle.fill")
-                    .foregroundStyle(search.isIndexing ? Color.brand : .green)
+                Image(systemName: search.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark.circle")
+                    .foregroundStyle(search.isIndexing ? Color.brand : Color.textTertiary)
                 Text(search.isIndexing
                      ? "Indexing… \(search.indexedCount)"
                      : (search.hasIndex ? "\(search.indexedCount) moments ready" : "No library yet"))
