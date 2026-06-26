@@ -2,7 +2,7 @@
 
 ## Context
 
-**Tafuta** ("find" in Kiswahili) is an **open-source (GPLv3)** macOS app that finds a specific
+**Tafuta** ("find" in Kiswahili) is a **proprietary, commercial** macOS app that finds a specific
 *moment* inside your own videos by describing it in plain language — type
 *"woman wearing white blouse in green meadow"* and jump straight to that second, even if the
 file is named `IMG_0423.mov`.
@@ -23,8 +23,10 @@ infrastructure. **v1 = (a) only.**
 - **Granularity:** Return the *exact moment/timestamp*, not just the file.
 - **Modality:** Visual only for v1 (audio transcription deferred).
 - **Inference:** **On-device** (research-backed below).
-- **Licensing/business:** **Open source, GPLv3. Core is free, forever.** Optional paid
-  *cloud tier* for power users (faster/larger models, offloaded bulk indexing) = open-core.
+- **Licensing/business:** **Proprietary / closed (private repo). Freemium + Pro
+  subscription** for recurring MRR. Free tier = local visual search (YouTube funnel); Pro =
+  Whisper audio search, cloud-accelerated indexing, sync, advanced export. Enterprise/
+  self-host later. Distribution: **direct** (Lemon Squeezy/Paddle + Sparkle), then Setapp/MAS.
 - **App shape:** **Both** — a full main window AND a Raycast/Spotlight-style global-hotkey
   floating launcher, sharing one search engine.
 - **Design north star:** **Linear** — minimal, premium, near-monochrome, no gradients.
@@ -163,20 +165,27 @@ controls), **Notion Calendar** (light/dark parity), **Arc** (materials/motion po
 
 ## Cost & business model
 
-**Build/run (v1, on-device, open source):**
-- Apple Developer Program: **already owned** ($99/yr).
-- Marginal runtime cost: **~$0** (user's own device).
-- Distribution: **direct** (Developer ID + notarization + **Sparkle** auto-updates). This
-  avoids the **App Sandbox** friction (the app reads videos across the disk). App Store
-  remains a later option for discovery (15% Small Business). **No charge for the core.**
-- License: **GPLv3** — derivatives stay open, discouraging closed commercial forks while
-  remaining fully open.
+**Proprietary, freemium → Pro subscription (recurring MRR).** Repo is private.
 
-**Optional paid cloud tier (open-core, later):** for power users / weak or Intel Macs —
-faster larger models, or offloaded bulk indexing. CLIP embedding on a **self-batched** GPU
-(e.g. Modal L4 ~$0.80/hr, ~1000 img/s) ≈ **sub-cent per hour of video** (avoid per-image
-endpoints — 100×+ costlier). Storage if ever syncing the index: **Cloudflare R2**
-(~$15/TB-mo, $0 egress); you'd sync ~2KB/frame embeddings, not video — near-free.
+- **Free tier:** local visual search (folder indexing, exact-moment results, in-app
+  playback). The free magic is the marketing — demoed on the YouTube channel.
+- **Pro (subscription):** Whisper audio/transcript search, **cloud-accelerated indexing**
+  for huge/older libraries, sync, advanced export, "find similar moments." The cloud tier is
+  the recurring-cost → recurring-charge anchor that justifies a subscription.
+- **Enterprise (later, high-ACV):** shared team indexes, self-host/on-prem, SSO, admin,
+  support, SLAs.
+
+**Distribution:** **direct** first — Developer ID + notarization + **Sparkle** updates, with
+**Lemon Squeezy/Paddle** as merchant-of-record (handles global tax, license keys, trials,
+subscriptions). Avoids App Sandbox friction (the app reads videos across the disk). Then
+**Setapp** (instant MRR from its subscriber base) and the **Mac App Store** (discovery, 15%
+small-business) as follow-on channels.
+
+**Costs:** Apple Developer Program already owned ($99/yr); on-device runtime ~$0. Cloud
+indexing (Pro): self-batched GPU (e.g. Modal L4 ~$0.80/hr, ~1000 img/s) ≈ **sub-cent per
+hour of video** — strong margin on a subscription. Index sync (if added): **Cloudflare R2**
+(~$15/TB-mo, $0 egress); ~2KB/frame embeddings, not video — near-free. Billing requires a
+licensing/auth layer (a later, pre-launch phase).
 
 ---
 
