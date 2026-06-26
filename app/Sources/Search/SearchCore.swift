@@ -15,6 +15,9 @@ final class SearchCore: ObservableObject {
     @Published var loadError: String? = nil
     @Published var playing: SearchResult? = nil       // drives the player sheet
     @Published var similarLabel: String? = nil        // banner for image-similarity mode
+    @Published var selectedID: SearchResult.ID? = nil // keyboard-nav selection
+    @Published private(set) var recentSearches: [String] =
+        UserDefaults.standard.stringArray(forKey: "tafuta.recents") ?? []
 
     let examples = [
         "a person holding an e-reader",
@@ -117,12 +120,37 @@ final class SearchCore: ObservableObject {
     var hasResults: Bool { !results.isEmpty }
 
     private func rank() {
-        guard let qv = queryVector else { results = []; return }
+        guard let qv = queryVector else { results = []; selectedID = nil; return }
         let scored = frames.map { SearchResult(frame: $0, score: Double(Embedder.cosine(qv, $0.vector))) }
-        withAnimation(Motion.standard) {
-            results = Array(scored.filter { $0.score >= strictness }
-                                  .sorted { $0.score > $1.score }
-                                  .prefix(60))
-        }
+        let ranked = Array(scored.filter { $0.score >= strictness }
+                                 .sorted { $0.score > $1.score }
+                                 .prefix(60))
+        withAnimation(Motion.standard) { results = ranked }
+        selectedID = ranked.first?.id
+        if !ranked.isEmpty, hasQuery { addRecent(query) }
+    }
+
+    // MARK: Recent searches
+
+    private func addRecent(_ q: String) {
+        let trimmed = q.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        var list = recentSearches.filter { $0.caseInsensitiveCompare(trimmed) != .orderedSame }
+        list.insert(trimmed, at: 0)
+        recentSearches = Array(list.prefix(8))
+        UserDefaults.standard.set(recentSearches, forKey: "tafuta.recents")
+    }
+
+    // MARK: Keyboard navigation
+
+    func moveSelection(_ delta: Int) {
+        guard !results.isEmpty else { return }
+        let idx = results.firstIndex { $0.id == selectedID } ?? 0
+        let next = min(max(idx + delta, 0), results.count - 1)
+        selectedID = results[next].id
+    }
+
+    func playSelected() {
+        if let id = selectedID, let r = results.first(where: { $0.id == id }) { play(r) }
     }
 }

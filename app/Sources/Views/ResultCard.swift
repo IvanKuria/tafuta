@@ -5,6 +5,7 @@ import SwiftUI
 struct ResultCard: View {
     @EnvironmentObject var search: SearchCore
     let result: SearchResult
+    var selected: Bool = false
     @State private var hovering = false
 
     var body: some View {
@@ -35,8 +36,15 @@ struct ResultCard: View {
             }
         }
         .padding(Space.m)
-        .cardStyle(fill: .bgSurface, border: hovering ? .borderStrong : .borderSubtle)
-        .softShadow(hovering ? 2 : 0)
+        .cardStyle(fill: .bgSurface,
+                   border: selected ? .brand : (hovering ? .borderStrong : .borderSubtle))
+        .overlay {
+            if selected {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .strokeBorder(Color.brand, lineWidth: 2)
+            }
+        }
+        .softShadow(hovering || selected ? 2 : 0)
         .scaleEffect(hovering ? 1.01 : 1.0)
         .animation(Motion.quick, value: hovering)
         .onHover { hovering = $0 }

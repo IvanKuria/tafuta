@@ -5,6 +5,8 @@ struct ResultsView: View {
     @EnvironmentObject var search: SearchCore
 
     private let columns = [GridItem(.adaptive(minimum: 220, maximum: 300), spacing: Space.l)]
+    @State private var columnCount = 3
+    @FocusState private var gridFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,28 +46,58 @@ struct ResultsView: View {
     }
 
     private var resultsScroll: some View {
-        ScrollView {
-            // Result count / similar-mode breadcrumb.
-            HStack(spacing: Space.s) {
-                if let label = search.similarLabel {
-                    Pill(text: label, systemImage: "square.on.square", tint: .textSecondary)
+        ScrollViewReader { proxy in
+            ScrollView {
+                // Result count / similar-mode breadcrumb.
+                HStack(spacing: Space.s) {
+                    if let label = search.similarLabel {
+                        Pill(text: label, systemImage: "square.on.square", tint: .textSecondary)
+                    }
+                    Text("\(search.results.count) moments")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.textTertiary)
+                    Spacer()
+                    Text("↑↓ navigate · ↵ play · ⌘K actions")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.textTertiary)
                 }
-                Text("\(search.results.count) moments")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.textTertiary)
-                Spacer()
-            }
-            .padding(.horizontal, Space.l)
-            .padding(.top, Space.m)
+                .padding(.horizontal, Space.l)
+                .padding(.top, Space.m)
 
-            LazyVGrid(columns: columns, spacing: Space.l) {
-                ForEach(Array(search.results.enumerated()), id: \.element.id) { i, result in
-                    ResultCard(result: result)
-                        .modifier(StaggeredAppear(index: i))
+                GeometryReader { geo in
+                    Color.clear.onAppear { updateColumns(geo.size.width) }
+                        .onChange(of: geo.size.width) { _, w in updateColumns(w) }
                 }
+                .frame(height: 0)
+
+                LazyVGrid(columns: columns, spacing: Space.l) {
+                    ForEach(Array(search.results.enumerated()), id: \.element.id) { i, result in
+                        ResultCard(result: result, selected: result.id == search.selectedID)
+                            .id(result.id)
+                            .modifier(StaggeredAppear(index: i))
+                    }
+                }
+                .padding(Space.l)
             }
-            .padding(Space.l)
+            .focusable()
+            .focused($gridFocused)
+            .onAppear { gridFocused = true }
+            .onMoveCommand { dir in
+                switch dir {
+                case .left:  search.moveSelection(-1)
+                case .right: search.moveSelection(1)
+                case .up:    search.moveSelection(-columnCount)
+                case .down:  search.moveSelection(columnCount)
+                @unknown default: break
+                }
+                if let id = search.selectedID { withAnimation(Motion.quick) { proxy.scrollTo(id, anchor: .center) } }
+            }
+            .onKeyPress(.return) { search.playSelected(); return .handled }
         }
+    }
+
+    private func updateColumns(_ width: CGFloat) {
+        columnCount = max(1, Int(width / (236 + Space.l)))
     }
 }
 
@@ -92,14 +124,20 @@ struct EmptyState: View {
             if let err = search.loadError {
                 icon("exclamationmark.triangle"); title("Couldn’t load the search model"); subtitle(err)
             } else if !search.hasIndex {
-                icon("plus.rectangle.on.folder")
-                title(search.isIndexing ? "Indexing…" : "Add your videos")
+                IconChip(systemName: "sparkle.magnifyingglass", tint: .brand, size: 64)
+                title(search.isIndexing ? "Indexing…" : "Welcome to Tafuta")
                 subtitle(search.isIndexing
                          ? "\(search.indexedCount) moments indexed so far…"
-                         : "Point Tafuta at a folder of videos. Everything stays on your Mac — no uploads, no account.")
+                         : "Search inside your videos by describing a moment. Everything stays on your Mac — no uploads, no account.")
                 if !search.isIndexing {
                     Button { search.addFolder() } label: { Text("Choose Folder…") }
                         .buttonStyle(PrimaryButtonStyle())
+                    HStack(spacing: Space.xs) {
+                        Text("Then press").font(Typo.caption).foregroundStyle(Color.textTertiary)
+                        KBD(key: "⌘"); KBD(key: "K")
+                        Text("to search from anywhere").font(Typo.caption).foregroundStyle(Color.textTertiary)
+                    }
+                    .padding(.top, Space.xs)
                 }
             } else if search.hasQuery {
                 icon("magnifyingglass"); title("No matches")
@@ -109,6 +147,12 @@ struct EmptyState: View {
                 subtitle("\(search.indexedCount) moments ready. Try one:")
                 FlowExamples(examples: search.examples) { search.runExample($0) }
                     .frame(maxWidth: 460)
+                if !search.recentSearches.isEmpty {
+                    Text("RECENT").font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.textTertiary).tracking(0.5).padding(.top, Space.s)
+                    FlowExamples(examples: Array(search.recentSearches.prefix(4))) { search.runExample($0) }
+                        .frame(maxWidth: 460)
+                }
             }
             Spacer(); Spacer()
         }
