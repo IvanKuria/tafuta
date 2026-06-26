@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+*.swp
+
+# Xcode / SwiftPM build artifacts
+build/
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+Package.resolved
+
+# Downloaded Core ML models (large; fetched on demand, not committed)
+models/
+*.mlpackage
+*.mlmodelc
+
+# Spike test media & generated indexes
+spike/media/
+*.sqlite
+*.sqlite-*
+
+# Secrets / local config
+.env
+*.local
