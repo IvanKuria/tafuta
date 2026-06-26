@@ -1,85 +1,50 @@
 import SwiftUI
 
-// Main content area: search field, strictness, result grid (or contextual empty state).
+// Full-width results surface (search/strictness/grouping live in TopBar now).
+// Grouped-by-video (collapsible) or flat grid; drag videos/folder in; keyboard nav.
 struct ResultsView: View {
     @EnvironmentObject var search: SearchCore
 
     private let columns = [GridItem(.adaptive(minimum: 220, maximum: 300), spacing: Space.l)]
     @State private var columnCount = 3
-    @FocusState private var gridFocused: Bool
+    @State private var dropTargeted = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Flat search/header bar (no boxed material), subtle bottom divider.
-            HStack(spacing: Space.m) {
-                SearchField()
-                if search.hasResults {
-                    StrictnessControl()
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
-                }
-            }
-            .padding(.horizontal, Space.l).padding(.vertical, Space.m)
-            .overlay(alignment: .bottom) { Divider().overlay(Color.borderSubtle) }
-            .animation(Motion.standard, value: search.hasResults)
-
-            if search.hasResults {
-                resultsScroll
-            } else if search.isIndexing && search.hasQuery {
-                skeletonGrid
-            } else {
-                EmptyState()
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.bgCanvas)
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.bgCanvas)
+            .dropDestination(for: URL.self) { urls, _ in
+                search.indexURLs(urls); return true
+            } isTargeted: { dropTargeted = $0 }
+            .overlay { if dropTargeted { dropHighlight } }
     }
 
-    private var skeletonGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: Space.l) {
-                ForEach(0..<6, id: \.self) { _ in SkeletonCard() }
-            }
-            .padding(Space.l)
+    @ViewBuilder private var content: some View {
+        if search.hasResults {
+            resultsScroll
+        } else if search.isIndexing && search.hasQuery {
+            skeletonGrid
+        } else {
+            EmptyState()
         }
     }
+
+    // MARK: Results
 
     private var resultsScroll: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                // Result count / similar-mode breadcrumb.
-                HStack(spacing: Space.s) {
-                    if let label = search.similarLabel {
-                        Pill(text: label, systemImage: "square.on.square", tint: .textSecondary)
-                    }
-                    Text("\(search.results.count) moments")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.textTertiary)
-                    Spacer()
-                    Text("↑↓ navigate · ↵ play · ⌘K actions")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.textTertiary)
-                }
-                .padding(.horizontal, Space.l)
-                .padding(.top, Space.m)
-
+                countRow
                 GeometryReader { geo in
-                    Color.clear.onAppear { updateColumns(geo.size.width) }
+                    Color.clear
+                        .onAppear { updateColumns(geo.size.width) }
                         .onChange(of: geo.size.width) { _, w in updateColumns(w) }
                 }
                 .frame(height: 0)
 
-                LazyVGrid(columns: columns, spacing: Space.l) {
-                    ForEach(Array(search.results.enumerated()), id: \.element.id) { i, result in
-                        ResultCard(result: result, selected: result.id == search.selectedID)
-                            .id(result.id)
-                            .modifier(StaggeredAppear(index: i))
-                    }
-                }
-                .padding(Space.l)
+                if search.grouping == .flat { flatGrid } else { groupedGrid }
             }
             .focusable()
-            .focused($gridFocused)
-            .onAppear { gridFocused = true }
             .onMoveCommand { dir in
                 switch dir {
                 case .left:  search.moveSelection(-1)
@@ -94,45 +59,122 @@ struct ResultsView: View {
         }
     }
 
+    private var flatGrid: some View {
+        LazyVGrid(columns: columns, spacing: Space.l) {
+            ForEach(Array(search.results.enumerated()), id: \.element.id) { i, result in
+                ResultCard(result: result, selected: result.id == search.selectedID)
+                    .id(result.id)
+                    .modifier(StaggeredAppear(index: i))
+            }
+        }
+        .padding(Space.l)
+    }
+
+    private var groupedGrid: some View {
+        LazyVStack(spacing: Space.m, pinnedViews: [.sectionHeaders]) {
+            ForEach(search.groupedResults) { group in
+                Section {
+                    if !search.collapsedVideos.contains(group.id) {
+                        LazyVGrid(columns: columns, spacing: Space.l) {
+                            ForEach(Array(group.items.enumerated()), id: \.element.id) { i, result in
+                                ResultCard(result: result, selected: result.id == search.selectedID)
+                                    .id(result.id)
+                                    .modifier(StaggeredAppear(index: i))
+                            }
+                        }
+                        .padding(.horizontal, Space.l)
+                        .padding(.bottom, Space.m)
+                    }
+                } header: {
+                    VideoSectionHeader(
+                        group: group,
+                        collapsed: search.collapsedVideos.contains(group.id),
+                        onToggle: { search.toggleCollapse(group) },
+                        onReveal: { ClipExporter.revealInFinder(group.videoURL) }
+                    )
+                }
+            }
+        }
+        .padding(.top, Space.m)
+    }
+
+    private var countRow: some View {
+        HStack(spacing: Space.s) {
+            if let label = search.similarLabel {
+                Pill(text: label, systemImage: "square.on.square", tint: .textSecondary)
+            }
+            Text("\(search.results.count) moments")
+                .font(Typo.caption).foregroundStyle(Color.textTertiary)
+            Spacer()
+            Text("↑↓ navigate · ↵ play · ⌘I inspector")
+                .font(.system(size: 10, weight: .medium)).foregroundStyle(Color.textTertiary)
+        }
+        .padding(.horizontal, Space.l).padding(.top, Space.m)
+    }
+
+    private var skeletonGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: Space.l) {
+                ForEach(0..<6, id: \.self) { _ in SkeletonCard() }
+            }
+            .padding(Space.l)
+        }
+    }
+
+    private var dropHighlight: some View {
+        ZStack {
+            Color.brand.opacity(0.06)
+            RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous)
+                .strokeBorder(Color.brand, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+                .padding(Space.m)
+            VStack(spacing: Space.s) {
+                IconChip(systemName: "tray.and.arrow.down", tint: .brand, size: 44)
+                Text("Drop videos or a folder to index")
+                    .font(Typo.title3).foregroundStyle(Color.textPrimary)
+            }
+        }
+        .allowsHitTesting(false)
+        .transition(.opacity)
+    }
+
     private func updateColumns(_ width: CGFloat) {
         columnCount = max(1, Int(width / (236 + Space.l)))
     }
 }
 
-// Match strictness as a clean dropdown (Codex-style), not a raw slider.
-struct StrictnessControl: View {
-    @EnvironmentObject var search: SearchCore
-
-    private var label: String {
-        switch search.strictness {
-        case ..<0.14: return "Loose"
-        case ..<0.22: return "Balanced"
-        default:      return "Strict"
-        }
-    }
+// Collapsible per-video section header for grouped results.
+struct VideoSectionHeader: View {
+    let group: ResultGroup
+    let collapsed: Bool
+    let onToggle: () -> Void
+    let onReveal: () -> Void
 
     var body: some View {
-        Menu {
-            Button("Loose")    { set(0.10) }
-            Button("Balanced") { set(0.18) }
-            Button("Strict")   { set(0.26) }
-        } label: {
-            HStack(spacing: Space.xs) {
-                Image(systemName: "slider.horizontal.3").font(.system(size: 10, weight: .semibold))
-                Text("Match: \(label)").font(.system(size: 11, weight: .semibold))
-                Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
+        HStack(spacing: Space.s) {
+            Button(action: onToggle) {
+                Image(systemName: collapsed ? "chevron.right" : "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(width: 16)
             }
-            .foregroundStyle(Color.textSecondary)
-            .padding(.horizontal, Space.s).padding(.vertical, 5)
-            .background(Color.bgInset, in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-    }
+            .buttonStyle(.plain)
 
-    private func set(_ v: Double) { search.strictness = v; search.runSearch() }
+            Text(group.name)
+                .font(Typo.title3).foregroundStyle(Color.textPrimary)
+                .lineLimit(1).truncationMode(.middle)
+            Pill(text: "\(group.items.count)")
+            Spacer()
+            Button(action: onReveal) {
+                Image(systemName: "folder").font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+            }
+            .buttonStyle(.plain).help("Reveal in Finder")
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onToggle)
+        .padding(.horizontal, Space.l).padding(.vertical, Space.s)
+        .background(Color.bgCanvas.opacity(0.92))
+    }
 }
 
 // Contextual empty state: error → no-library → no-results → ready-with-examples.
@@ -145,19 +187,13 @@ struct EmptyState: View {
                 icon("exclamationmark.triangle"); title("Couldn’t load the search model"); subtitle(err)
             } else if !search.hasIndex {
                 IconChip(systemName: "sparkle.magnifyingglass", tint: .brand, size: 64)
-                title(search.isIndexing ? "Indexing…" : "Welcome to Tafuta")
+                title(search.isIndexing ? "Indexing…" : "Add your videos")
                 subtitle(search.isIndexing
                          ? "\(search.indexedCount) moments indexed so far…"
-                         : "Search inside your videos by describing a moment. Everything stays on your Mac — no uploads, no account.")
+                         : "Point Tafuta at a folder of videos — or drag them in. Everything stays on your Mac.")
                 if !search.isIndexing {
                     Button { search.addFolder() } label: { Text("Choose Folder…") }
                         .buttonStyle(PrimaryButtonStyle())
-                    HStack(spacing: Space.xs) {
-                        Text("Then press").font(Typo.caption).foregroundStyle(Color.textTertiary)
-                        KBD(key: "⌘"); KBD(key: "K")
-                        Text("to search from anywhere").font(Typo.caption).foregroundStyle(Color.textTertiary)
-                    }
-                    .padding(.top, Space.xs)
                 }
             } else if search.hasQuery {
                 icon("magnifyingglass"); title("No matches")
@@ -181,15 +217,13 @@ struct EmptyState: View {
     }
 
     private func icon(_ name: String) -> some View {
-        Image(systemName: name).font(.system(size: 40, weight: .light))
-            .foregroundStyle(Color.textTertiary)
+        Image(systemName: name).font(.system(size: 40, weight: .light)).foregroundStyle(Color.textTertiary)
     }
     private func title(_ t: String) -> some View {
-        Text(t).font(.system(size: 22, weight: .bold)).tracking(-0.4)
-            .foregroundStyle(Color.textPrimary)
+        Text(t).font(Typo.title).tracking(-0.4).foregroundStyle(Color.textPrimary)
     }
     private func subtitle(_ s: String) -> some View {
-        Text(s).font(.system(size: 13)).foregroundStyle(Color.textSecondary)
+        Text(s).font(Typo.body).foregroundStyle(Color.textSecondary)
             .multilineTextAlignment(.center).frame(maxWidth: 420)
     }
 }

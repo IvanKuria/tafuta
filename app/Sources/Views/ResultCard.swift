@@ -20,7 +20,7 @@ struct ResultCard: View {
             HStack(spacing: Space.xs) {
                 Pill(text: "\(Int(result.normalizedScore * 100))% match", tint: .brand, filled: true)
                 Spacer(minLength: 0)
-                Button { ClipExporter.revealInFinder(result.videoURL) } label: {
+                Button { search.reveal(result) } label: {
                     Pill(text: "Finder", systemImage: "folder")
                 }
                 .buttonStyle(.plain)
@@ -41,7 +41,7 @@ struct ResultCard: View {
         .animation(Motion.quick, value: hovering)
         .onHover { hovering = $0 }
         .contentShape(Rectangle())
-        .onTapGesture { search.play(result) }
+        .onTapGesture { search.select(result) }
         .onDrag { NSItemProvider(object: result.thumbnail) }
         .contextMenu { menu }
     }
@@ -68,11 +68,9 @@ struct ResultCard: View {
 
     private var hoverActions: some View {
         HStack(spacing: 2) {
-            iconButton("play.fill") { search.play(result) }
+            iconButton("play.fill") { search.select(result); search.playInline() }
             iconButton("square.on.square") { search.findSimilar(to: result) }
-            iconButton("scissors") {
-                ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in }
-            }
+            iconButton("scissors") { search.exportClip(result) }
         }
         .padding(3)
         .background(.ultraThinMaterial, in: Capsule())
@@ -103,26 +101,15 @@ struct ResultCard: View {
     }
 
     @ViewBuilder private var menu: some View {
-        Button { search.play(result) } label: { Label("Play at \(result.timecode)", systemImage: "play.fill") }
+        Button { search.select(result) } label: { Label("Show in Inspector", systemImage: "sidebar.right") }
+        Button { search.select(result); search.playInline() } label: { Label("Play at \(result.timecode)", systemImage: "play.fill") }
         Button { search.findSimilar(to: result) } label: { Label("Find Similar Moments", systemImage: "square.on.square") }
         Divider()
-        Button { ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in } } label: {
-            Label("Export Clip…", systemImage: "scissors")
-        }
-        Button { ClipExporter.saveFrame(result.thumbnail, suggestedName: frameName) } label: {
-            Label("Save Frame…", systemImage: "photo")
-        }
-        Button { ClipExporter.copyTimestampLink(videoURL: result.videoURL, seconds: result.timestamp) } label: {
-            Label("Copy Timestamp Link", systemImage: "link")
-        }
+        Button { search.exportClip(result) } label: { Label("Export Clip…", systemImage: "scissors") }
+        Button { search.saveFrame(result) } label: { Label("Save Frame…", systemImage: "photo") }
+        Button { search.copyLink(result) } label: { Label("Copy Timestamp Link", systemImage: "link") }
         Divider()
-        Button { ClipExporter.revealInFinder(result.videoURL) } label: {
-            Label("Reveal in Finder", systemImage: "folder")
-        }
-    }
-
-    private var frameName: String {
-        let base = (result.videoName as NSString).deletingPathExtension
-        return "\(base) @ \(result.timecode).png"
+        Button { search.reveal(result) } label: { Label("Reveal in Finder", systemImage: "folder") }
+        Button(role: .destructive) { search.removeFromIndex(result) } label: { Label("Remove from Index", systemImage: "trash") }
     }
 }

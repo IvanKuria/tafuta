@@ -1,26 +1,35 @@
 import SwiftUI
 import KeyboardShortcuts
 
-// Main window: native NavigationSplitView (flat vibrant sidebar, single system
-// collapse toggle) + crisp content. No window-border hacks, no custom toggle.
+// Sidebar-less, content-first window: custom TopBar + full-width results,
+// with a native Inspector slide-out preview, a toast overlay, and first-run onboarding.
 struct MainWindow: View {
     @EnvironmentObject var search: SearchCore
     @Environment(\.openWindow) private var openWindow
 
+    // Inspector presentation derives from the selected moment.
+    private var inspectorShown: Binding<Bool> {
+        Binding(get: { search.inspectorMoment != nil },
+                set: { if !$0 { search.closeInspector() } })
+    }
+
     var body: some View {
-        NavigationSplitView {
-            Sidebar()
-                .navigationSplitViewColumnWidth(240)   // fixed → smooth collapse animation
-        } detail: {
+        VStack(spacing: 0) {
+            TopBar()
             ResultsView()
+                .inspector(isPresented: inspectorShown) {
+                    if let moment = search.inspectorMoment {
+                        MomentInspector(moment: moment)
+                            .inspectorColumnWidth(min: 320, ideal: 380, max: 560)
+                    }
+                }
         }
-        .navigationTitle("Tafuta")
+        .frame(minWidth: 720, minHeight: 480)
+        .background(Color.bgCanvas)
         .tint(Color.brand)
-        .sheet(item: $search.playing) { r in
-            PlayerView(url: r.videoURL, startTime: r.timestamp, title: r.videoName) {
-                search.playing = nil
-            }
-        }
+        .toastOverlay(search.toast)
+        .overlay { OnboardingModal() }
+        .onExitCommand { if search.inspectorMoment != nil { search.closeInspector() } }
         .onAppear {
             KeyboardShortcuts.onKeyUp(for: .summon) {
                 NSApp.activate(ignoringOtherApps: true)

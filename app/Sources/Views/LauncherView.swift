@@ -15,7 +15,13 @@ struct LauncherView: View {
                 Divider().overlay(Color.borderSubtle)
                 ScrollView {
                     VStack(spacing: Space.xs) {
-                        ForEach(search.results.prefix(6)) { LauncherRow(result: $0) }
+                        ForEach(search.results.prefix(6)) { result in
+                            LauncherRow(result: result) {
+                                openWindow(id: "main")
+                                NSApp.activate(ignoringOtherApps: true)
+                                search.select(result)
+                            }
+                        }
                     }
                     .padding(Space.s)
                 }
@@ -36,8 +42,10 @@ struct LauncherView: View {
 
 struct LauncherRow: View {
     let result: SearchResult
+    var onOpen: () -> Void = {}
     @State private var hovering = false
     var body: some View {
+        Button(action: onOpen) {
         HStack(spacing: Space.m) {
             Image(nsImage: result.thumbnail)
                 .resizable()
@@ -56,6 +64,9 @@ struct LauncherRow: View {
         .padding(.horizontal, Space.s).padding(.vertical, Space.s)
         .background(hovering ? Color.bgSurface : .clear,
                     in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+        .contentShape(Rectangle())
         .onHover { hovering = $0 }
+        }
+        .buttonStyle(.plain)
     }
 }

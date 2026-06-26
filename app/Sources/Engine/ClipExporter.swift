@@ -95,7 +95,8 @@ public enum ClipExporter {
     /// - Parameters:
     ///   - image: The frame image to save.
     ///   - suggestedName: The default file name to pre-fill in the save panel.
-    public static func saveFrame(_ image: NSImage, suggestedName: String) {
+    public static func saveFrame(_ image: NSImage, suggestedName: String,
+                                 completion: ((Bool) -> Void)? = nil) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.png]
         panel.nameFieldStringValue = suggestedName
@@ -103,18 +104,20 @@ public enum ClipExporter {
 
         // `runModal` returns `.OK` when the user confirms a destination.
         guard panel.runModal() == .OK, let url = panel.url else {
-            return
+            completion?(false); return
         }
 
         guard let data = pngData(from: image) else {
             Self.presentError(ExportError.imageEncodingFailed)
-            return
+            completion?(false); return
         }
 
         do {
             try data.write(to: url, options: .atomic)
+            completion?(true)
         } catch {
             Self.presentError(error)
+            completion?(false)
         }
     }
 
