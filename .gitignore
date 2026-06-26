@@ -25,5 +25,8 @@ spike/media/
 .env
 *.local
 
+# Unrelated project that lives in this working dir; never commit (contains secrets)
+mcpmarket-me/
+
 # XcodeGen-generated project (regenerate with `xcodegen generate`)
 *.xcodeproj/
