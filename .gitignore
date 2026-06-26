@@ -24,3 +24,6 @@ spike/media/
 # Secrets / local config
 .env
 *.local
+
+# XcodeGen-generated project (regenerate with `xcodegen generate`)
+*.xcodeproj/
