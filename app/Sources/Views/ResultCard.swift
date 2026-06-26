@@ -62,18 +62,18 @@ struct ResultCard: View {
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
 
-            // Hover quick-action bar (Raycast/Codex polish).
+            // Hover quick-action bar — monochrome, minimal.
             if hovering {
                 HStack(spacing: Space.xs) {
-                    chipButton("play.fill", Tint.indigo) { search.play(result) }
-                    chipButton("square.on.square", Tint.violet) { search.findSimilar(to: result) }
-                    chipButton("scissors", Tint.pink) {
+                    chipButton("play.fill") { search.play(result) }
+                    chipButton("square.on.square") { search.findSimilar(to: result) }
+                    chipButton("scissors") {
                         ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in }
                     }
                 }
                 .padding(Space.xs)
                 .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+                .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
                 .softShadow(2)
                 .padding(Space.s)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -101,13 +101,13 @@ struct ResultCard: View {
         .background(.black.opacity(0.55), in: Capsule())
     }
 
-    private func chipButton(_ icon: String, _ tint: Color, action: @escaping () -> Void) -> some View {
+    private func chipButton(_ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(Color.textPrimary)
                 .frame(width: 24, height: 24)
-                .background(tint.opacity(0.18), in: Circle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

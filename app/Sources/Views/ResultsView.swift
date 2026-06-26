@@ -10,7 +10,7 @@ struct ResultsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Translucent search/header band.
+            // Flat search/header bar (no boxed material), subtle bottom divider.
             HStack(spacing: Space.m) {
                 SearchField()
                 if search.hasResults {
@@ -20,7 +20,6 @@ struct ResultsView: View {
                 }
             }
             .padding(.horizontal, Space.l).padding(.vertical, Space.m)
-            .background(VisualEffectView(material: .headerView, blending: .withinWindow))
             .overlay(alignment: .bottom) { Divider().overlay(Color.borderSubtle) }
             .animation(Motion.standard, value: search.hasResults)
 
