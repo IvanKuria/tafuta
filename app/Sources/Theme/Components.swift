@@ -43,6 +43,84 @@ struct Pill: View {
     }
 }
 
+// Signature motif: a tinted rounded-square icon chip (the "premium brand-icon" feel).
+struct IconChip: View {
+    let systemName: String
+    var tint: Color = .brand
+    var size: CGFloat = 22
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: size * 0.52, weight: .semibold))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(tint)
+            .frame(width: size, height: size)
+            .background(tint.opacity(0.16),
+                        in: RoundedRectangle(cornerRadius: size * 0.30, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: size * 0.30, style: .continuous)
+                .strokeBorder(tint.opacity(0.18), lineWidth: 1))
+    }
+}
+
+// Subtle monochrome shimmer for loading/skeleton states.
+struct Shimmer: ViewModifier {
+    @State private var phase: CGFloat = -1.2
+    func body(content: Content) -> some View {
+        content.overlay(
+            GeometryReader { geo in
+                LinearGradient(colors: [.clear, .white.opacity(0.10), .clear],
+                               startPoint: .leading, endPoint: .trailing)
+                    .frame(width: geo.size.width * 0.6)
+                    .offset(x: phase * geo.size.width)
+            }
+            .allowsHitTesting(false)
+        )
+        .mask(content)
+        .onAppear {
+            withAnimation(.linear(duration: 1.3).repeatForever(autoreverses: false)) { phase = 1.4 }
+        }
+    }
+}
+
+extension View {
+    func shimmering() -> some View { modifier(Shimmer()) }
+    // Layered, soft shadow for genuinely-floating surfaces (launcher/popovers only).
+    func floatingShadow() -> some View {
+        shadow(color: .black.opacity(0.20), radius: 24, y: 8)
+            .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+    }
+}
+
+// Skeleton placeholder card shown while indexing (shimmering loading state).
+struct SkeletonCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                .fill(Color.bgInset).aspectRatio(16.0 / 9.0, contentMode: .fit)
+            RoundedRectangle(cornerRadius: Radius.tag).fill(Color.bgInset)
+                .frame(height: 10).frame(maxWidth: 150, alignment: .leading)
+            RoundedRectangle(cornerRadius: Radius.tag).fill(Color.bgInset)
+                .frame(height: 6).frame(maxWidth: 90, alignment: .leading)
+        }
+        .padding(Space.m)
+        .cardStyle()
+        .shimmering()
+    }
+}
+
+// Per-item staggered entrance for grid results.
+struct StaggeredAppear: ViewModifier {
+    let index: Int
+    @State private var shown = false
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 8)
+            .onAppear {
+                withAnimation(Motion.spring.delay(min(Double(index) * 0.018, 0.28))) { shown = true }
+            }
+    }
+}
+
 // Keyboard-shortcut chip (e.g. ⌘K) — quiet, monospaced, hairline.
 struct KBD: View {
     let key: String

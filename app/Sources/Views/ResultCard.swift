@@ -1,7 +1,7 @@
 import SwiftUI
 
-// A moment result: real frame thumbnail + filename + timecode + relevance.
-// Click to play at the timestamp; right-click for actions; drag the frame out to Finder.
+// A moment result: real frame thumbnail + filename + location + badges + relevance.
+// Click to play; hover for quick actions; right-click for the full menu; drag the frame out.
 struct ResultCard: View {
     @EnvironmentObject var search: SearchCore
     let result: SearchResult
@@ -9,34 +9,23 @@ struct ResultCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            ZStack(alignment: .bottomTrailing) {
-                Image(nsImage: result.thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                    .overlay(alignment: .center) {
-                        if hovering {
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 34))
-                                .foregroundStyle(.white.opacity(0.92))
-                                .shadow(radius: 6)
-                                .transition(.opacity)
-                        }
-                    }
-                Text(result.timecode)
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(.black.opacity(0.55), in: Capsule())
-                    .padding(Space.s)
-            }
-
+            thumbnail
             Text(result.videoName)
-                .font(.system(size: 12, weight: .medium))
+                .font(Typo.callout)
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(1).truncationMode(.middle)
+
+            // Tappable location breadcrumb → reveal in Finder.
+            Button { ClipExporter.revealInFinder(result.videoURL) } label: {
+                HStack(spacing: Space.xs) {
+                    Image(systemName: "folder").font(.system(size: 9, weight: .medium))
+                    Text(result.prettyPath).font(Typo.caption)
+                        .lineLimit(1).truncationMode(.head)
+                }
+                .foregroundStyle(Color.textTertiary)
+            }
+            .buttonStyle(.plain)
+            .help("Reveal in Finder")
 
             HStack(spacing: Space.s) {
                 ScoreBar(score: result.normalizedScore)
@@ -47,31 +36,90 @@ struct ResultCard: View {
         }
         .padding(Space.m)
         .cardStyle(fill: .bgSurface, border: hovering ? .borderStrong : .borderSubtle)
+        .softShadow(hovering ? 2 : 0)
         .scaleEffect(hovering ? 1.01 : 1.0)
         .animation(Motion.quick, value: hovering)
         .onHover { hovering = $0 }
         .contentShape(Rectangle())
         .onTapGesture { search.play(result) }
-        .help("Click to play at \(result.timecode)")
-        // Drag the frame image out to Finder / other apps.
         .onDrag { NSItemProvider(object: result.thumbnail) }
-        .contextMenu {
-            Button { search.play(result) } label: { Label("Play at \(result.timecode)", systemImage: "play.fill") }
-            Button { search.findSimilar(to: result) } label: { Label("Find Similar Moments", systemImage: "square.on.square") }
-            Divider()
-            Button { ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in } } label: {
-                Label("Export Clip…", systemImage: "scissors")
+        .contextMenu { menu }
+    }
+
+    private var thumbnail: some View {
+        ZStack(alignment: .bottomTrailing) {
+            Image(nsImage: result.thumbnail)
+                .resizable().aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+
+            // Hover quick-action bar (Raycast/Codex polish).
+            if hovering {
+                HStack(spacing: Space.xs) {
+                    chipButton("play.fill", Tint.indigo) { search.play(result) }
+                    chipButton("square.on.square", Tint.violet) { search.findSimilar(to: result) }
+                    chipButton("scissors", Tint.pink) {
+                        ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in }
+                    }
+                }
+                .padding(Space.xs)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+                .softShadow(2)
+                .padding(Space.s)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-            Button { ClipExporter.saveFrame(result.thumbnail, suggestedName: frameName) } label: {
-                Label("Save Frame…", systemImage: "photo")
+
+            // Timecode + duration badges.
+            HStack(spacing: Space.xs) {
+                if !result.durationLabel.isEmpty {
+                    badge(result.durationLabel, icon: "clock")
+                }
+                badge(result.timecode, icon: "scope")
             }
-            Button { ClipExporter.copyTimestampLink(videoURL: result.videoURL, seconds: result.timestamp) } label: {
-                Label("Copy Timestamp Link", systemImage: "link")
-            }
-            Divider()
-            Button { ClipExporter.revealInFinder(result.videoURL) } label: {
-                Label("Reveal in Finder", systemImage: "folder")
-            }
+            .padding(Space.s)
+        }
+    }
+
+    private func badge(_ text: String, icon: String) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 8, weight: .semibold))
+            Text(text).font(.system(size: 11, weight: .semibold).monospacedDigit())
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 6).padding(.vertical, 2)
+        .background(.black.opacity(0.55), in: Capsule())
+    }
+
+    private func chipButton(_ icon: String, _ tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 24, height: 24)
+                .background(tint.opacity(0.18), in: Circle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder private var menu: some View {
+        Button { search.play(result) } label: { Label("Play at \(result.timecode)", systemImage: "play.fill") }
+        Button { search.findSimilar(to: result) } label: { Label("Find Similar Moments", systemImage: "square.on.square") }
+        Divider()
+        Button { ClipExporter.exportClip(videoURL: result.videoURL, around: result.timestamp) { _ in } } label: {
+            Label("Export Clip…", systemImage: "scissors")
+        }
+        Button { ClipExporter.saveFrame(result.thumbnail, suggestedName: frameName) } label: {
+            Label("Save Frame…", systemImage: "photo")
+        }
+        Button { ClipExporter.copyTimestampLink(videoURL: result.videoURL, seconds: result.timestamp) } label: {
+            Label("Copy Timestamp Link", systemImage: "link")
+        }
+        Divider()
+        Button { ClipExporter.revealInFinder(result.videoURL) } label: {
+            Label("Reveal in Finder", systemImage: "folder")
         }
     }
 

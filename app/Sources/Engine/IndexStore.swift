@@ -6,7 +6,7 @@ import CryptoKit
 // keyed by file path and invalidated by modification date / size. Lets the app remember
 // indexed libraries across launches instead of re-embedding every time.
 enum IndexStore {
-    private static let magic: [UInt8] = Array("TFI1".utf8)
+    private static let magic: [UInt8] = Array("TFI2".utf8)
 
     private static var cacheDir: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -41,7 +41,9 @@ enum IndexStore {
         c = 4
         let cm = read(Double.self), cs = read(Int64.self)
         guard abs(cm - mtime) < 0.5, cs == size else { return nil }   // stale
+        let duration = read(Double.self)
         let count = Int(read(Int32.self))
+        let modified = Date(timeIntervalSince1970: mtime)
 
         var frames: [IndexedFrame] = []
         frames.reserveCapacity(count)
@@ -57,7 +59,8 @@ enum IndexStore {
             let jpeg = data.subdata(in: c..<c + tlen); c += tlen
             let thumb = NSImage(data: jpeg) ?? NSImage()
             frames.append(IndexedFrame(videoURL: videoURL, videoName: videoURL.lastPathComponent,
-                                       timestamp: t, vector: vec, thumbnail: thumb))
+                                       timestamp: t, vector: vec, thumbnail: thumb,
+                                       videoDuration: duration, videoModified: modified))
         }
         return frames
     }
@@ -66,7 +69,7 @@ enum IndexStore {
         guard let (mtime, size) = stat(videoURL) else { return }
         var data = Data(magic)
         func append<T>(_ v: T) { var v = v; withUnsafeBytes(of: &v) { data.append(contentsOf: $0) } }
-        append(mtime); append(size); append(Int32(frames.count))
+        append(mtime); append(size); append(frames.first?.videoDuration ?? 0); append(Int32(frames.count))
         for f in frames {
             append(f.timestamp)
             append(Int32(f.vector.count))

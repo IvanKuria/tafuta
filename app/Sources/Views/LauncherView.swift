@@ -29,6 +29,7 @@ struct LauncherView: View {
             RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous)
                 .strokeBorder(Color.borderDefault, lineWidth: 1)
         )
+        .floatingShadow()
         .tint(Color.brand)
     }
 }

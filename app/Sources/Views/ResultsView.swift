@@ -8,7 +8,7 @@ struct ResultsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar + (progressively disclosed) strictness control.
+            // Translucent search/header band.
             HStack(spacing: Space.m) {
                 SearchField()
                 if search.hasResults {
@@ -17,19 +17,30 @@ struct ResultsView: View {
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
-            .padding(Space.l)
+            .padding(.horizontal, Space.l).padding(.vertical, Space.m)
+            .background(VisualEffectView(material: .headerView, blending: .withinWindow))
+            .overlay(alignment: .bottom) { Divider().overlay(Color.borderSubtle) }
             .animation(Motion.standard, value: search.hasResults)
-
-            Divider().overlay(Color.borderSubtle)
 
             if search.hasResults {
                 resultsScroll
+            } else if search.isIndexing && search.hasQuery {
+                skeletonGrid
             } else {
                 EmptyState()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgCanvas)
+    }
+
+    private var skeletonGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: Space.l) {
+                ForEach(0..<6, id: \.self) { _ in SkeletonCard() }
+            }
+            .padding(Space.l)
+        }
     }
 
     private var resultsScroll: some View {
@@ -48,13 +59,12 @@ struct ResultsView: View {
             .padding(.top, Space.m)
 
             LazyVGrid(columns: columns, spacing: Space.l) {
-                ForEach(search.results) { result in
+                ForEach(Array(search.results.enumerated()), id: \.element.id) { i, result in
                     ResultCard(result: result)
-                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                        .modifier(StaggeredAppear(index: i))
                 }
             }
             .padding(Space.l)
-            .animation(Motion.standard, value: search.results.map(\.id))
         }
     }
 }

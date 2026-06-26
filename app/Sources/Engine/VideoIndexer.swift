@@ -12,6 +12,8 @@ struct IndexedFrame: Identifiable {
     let timestamp: Double
     let vector: [Float]
     let thumbnail: NSImage
+    var videoDuration: Double = 0
+    var videoModified: Date? = nil
 }
 
 enum VideoIndexer {
@@ -39,6 +41,7 @@ enum VideoIndexer {
         let asset = AVURLAsset(url: url)
         let duration = CMTimeGetSeconds(asset.duration)
         guard duration.isFinite, duration > 0 else { return }
+        let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
 
         let gen = AVAssetImageGenerator(asset: asset)
         gen.appliesPreferredTrackTransform = true
@@ -57,7 +60,8 @@ enum VideoIndexer {
                 lastKept = vec
                 let thumb = makeThumbnail(cg)
                 onFrame(IndexedFrame(videoURL: url, videoName: name, timestamp: t,
-                                     vector: vec, thumbnail: thumb))
+                                     vector: vec, thumbnail: thumb,
+                                     videoDuration: duration, videoModified: modified))
             }
             t += 1.0
         }
