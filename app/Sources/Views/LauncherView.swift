@@ -38,11 +38,11 @@ struct LauncherRow: View {
     @State private var hovering = false
     var body: some View {
         HStack(spacing: Space.m) {
-            RoundedRectangle(cornerRadius: Radius.tag, style: .continuous)
-                .fill(Color.bgInset)
+            Image(nsImage: result.thumbnail)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
                 .frame(width: 52, height: 30)
-                .overlay(Image(systemName: "film").font(.system(size: 11))
-                    .foregroundStyle(Color.textTertiary))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.tag, style: .continuous))
             VStack(alignment: .leading, spacing: 1) {
                 Text(result.videoName).font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.textPrimary).lineLimit(1).truncationMode(.middle)

@@ -48,26 +48,36 @@ struct StrictnessControl: View {
     }
 }
 
-// Empty / first-run state: privacy reassurance + tappable example queries.
+// Empty / first-run state, branching on whether a library has been indexed yet.
 struct EmptyState: View {
     @EnvironmentObject var search: SearchCore
     var body: some View {
         VStack(spacing: Space.l) {
             Spacer()
-            Image(systemName: "sparkle.magnifyingglass")
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(Color.textTertiary)
-            VStack(spacing: Space.xs) {
-                Text(search.hasQuery ? "No matches" : "Search inside your videos")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
-                Text(search.hasQuery
-                     ? "Try loosening strictness or rephrasing."
-                     : "Everything stays on your Mac — no uploads, no account.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.textSecondary)
-            }
-            if !search.hasQuery {
+            if let err = search.loadError {
+                icon("exclamationmark.triangle")
+                title("Couldn’t load the search model")
+                subtitle(err)
+            } else if !search.hasIndex {
+                // No library yet → invite to add a folder.
+                icon("plus.rectangle.on.folder")
+                title(search.isIndexing ? "Indexing…" : "Add your videos")
+                subtitle(search.isIndexing
+                         ? "\(search.indexedCount) moments indexed so far…"
+                         : "Point Tafuta at a folder of videos. Everything stays on your Mac — no uploads, no account.")
+                if !search.isIndexing {
+                    Button { search.addFolder() } label: { Text("Choose Folder…") }
+                        .buttonStyle(PrimaryButtonStyle())
+                }
+            } else if search.hasQuery {
+                icon("magnifyingglass")
+                title("No matches")
+                subtitle("Try loosening strictness or rephrasing.")
+            } else {
+                // Index ready, no query → teach with examples.
+                icon("sparkle.magnifyingglass")
+                title("Search inside your videos")
+                subtitle("\(search.indexedCount) moments ready. Try one:")
                 FlowExamples(examples: search.examples) { search.runExample($0) }
                     .frame(maxWidth: 460)
             }
@@ -75,6 +85,18 @@ struct EmptyState: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(Space.xl)
+    }
+
+    private func icon(_ name: String) -> some View {
+        Image(systemName: name).font(.system(size: 40, weight: .light))
+            .foregroundStyle(Color.textTertiary)
+    }
+    private func title(_ t: String) -> some View {
+        Text(t).font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.textPrimary)
+    }
+    private func subtitle(_ s: String) -> some View {
+        Text(s).font(.system(size: 13)).foregroundStyle(Color.textSecondary)
+            .multilineTextAlignment(.center).frame(maxWidth: 420)
     }
 }
 

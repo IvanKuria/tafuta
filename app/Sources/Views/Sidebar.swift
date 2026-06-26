@@ -8,8 +8,11 @@ struct Sidebar: View {
         List {
             Section("Library") {
                 Label("All Videos", systemImage: "square.grid.2x2")
-                Label("Add Folder…", systemImage: "plus.rectangle.on.folder")
-                    .foregroundStyle(Color.textSecondary)
+                Button { search.addFolder() } label: {
+                    Label("Add Folder…", systemImage: "plus.rectangle.on.folder")
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .buttonStyle(.plain)
             }
             Section("Saved Searches") {
                 Label("Recent moments", systemImage: "clock")
@@ -33,8 +36,8 @@ struct IndexingStatus: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(search.isIndexing ? Color.brand : Color.textTertiary)
             Text(search.isIndexing
-                 ? "Indexing \(search.indexedCount)/\(search.totalCount)…"
-                 : "\(search.indexedCount) moments ready")
+                 ? "Indexing… \(search.indexedCount) moments"
+                 : (search.hasIndex ? "\(search.indexedCount) moments ready" : "No library yet"))
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Color.textSecondary)
             Spacer()

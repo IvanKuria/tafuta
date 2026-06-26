@@ -1,11 +1,15 @@
-import Foundation
+import AppKit
 
-// A single retrieval result: a moment (video + timestamp) and its relevance score.
-struct SearchResult: Identifiable, Hashable {
+// A scored moment: the indexed frame plus its similarity to the current query.
+struct SearchResult: Identifiable {
     let id = UUID()
-    let videoName: String
-    let timestamp: Double   // seconds into the video
-    let score: Double       // cosine similarity, ~0...0.4 in practice (see docs/PHASE0.md)
+    let frame: IndexedFrame
+    let score: Double
+
+    var videoName: String { frame.videoName }
+    var videoURL: URL { frame.videoURL }
+    var timestamp: Double { frame.timestamp }
+    var thumbnail: NSImage { frame.thumbnail }
 
     var timecode: String {
         String(format: "%d:%02d", Int(timestamp) / 60, Int(timestamp) % 60)

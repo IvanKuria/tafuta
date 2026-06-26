@@ -11,8 +11,8 @@ struct MenuBarView: View {
                 Image(systemName: search.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark.circle.fill")
                     .foregroundStyle(search.isIndexing ? Color.brand : .green)
                 Text(search.isIndexing
-                     ? "Indexing \(search.indexedCount)/\(search.totalCount)…"
-                     : "\(search.indexedCount) moments ready")
+                     ? "Indexing… \(search.indexedCount)"
+                     : (search.hasIndex ? "\(search.indexedCount) moments ready" : "No library yet"))
                     .font(.system(size: 13, weight: .medium))
             }
 

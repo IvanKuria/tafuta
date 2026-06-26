@@ -7,16 +7,14 @@ struct ResultCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            // Thumbnail placeholder (Phase 2: the actual frame at this timestamp + hover-scrub).
+            // Real frame at this timestamp.
             ZStack(alignment: .bottomTrailing) {
-                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                    .fill(Color.bgInset)
+                Image(nsImage: result.thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .overlay(
-                        Image(systemName: "film")
-                            .font(.system(size: 22, weight: .light))
-                            .foregroundStyle(Color.textTertiary)
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 Text(result.timecode)
                     .font(.system(size: 11, weight: .semibold).monospacedDigit())
                     .foregroundStyle(.white)

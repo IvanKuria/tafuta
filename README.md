@@ -53,12 +53,17 @@ with Setapp and the Mac App Store as follow-on channels.
 
 ## Building
 
-Requires macOS on Apple Silicon, Xcode, and XcodeGen (`brew install xcodegen`). Generate and
-build the app:
+Requires macOS on Apple Silicon, Xcode, and XcodeGen (`brew install xcodegen`).
 
 ```sh
-cd app && xcodegen generate && xcodebuild -scheme Tafuta -configuration Debug build
+./tools/fetch_models.sh          # download MobileCLIP S0 Core ML models (gitignored, ~120MB)
+cd app && xcodegen generate
+xcodebuild -scheme Tafuta -configuration Debug build
+open Tafuta.xcodeproj            # or open in Xcode and Run
 ```
+
+Then click **Add Folder…** and pick a folder of videos. (Dev shortcut: set
+`TAFUTA_INDEX_DIR=/path/to/videos` to auto-index a folder on launch.)
 
 ## License
 
