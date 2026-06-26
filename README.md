@@ -7,8 +7,8 @@ videos with plain language. Describe a moment — *"woman wearing a white blouse
 meadow"* — and Tafuta jumps straight to that second of the clip, even if the file is named
 `IMG_0423.mov`.
 
-> **Proprietary — private repository.** Tafuta is a commercial product. This source is
-> confidential and all rights are reserved. See [`LICENSE`](LICENSE).
+> **Open source (GPLv3).** Free and open. A paid Pro/cloud tier may be offered later
+> (open-core) — the core app stays open. See [`LICENSE`](LICENSE).
 
 It's built for people with large video libraries (creators, filmmakers, anyone with a
 camera roll out of control) where filenames and dates are useless for finding *that one
@@ -31,18 +31,16 @@ shot*.
 quality and indexing throughput on Apple Silicon. See [`docs/PLAN.md`](docs/PLAN.md) for the
 full architecture, design system, and roadmap.
 
-## Business model
+## Model
 
-Freemium with a **Pro subscription** (recurring MRR):
+**Open source now (GPLv3)**, with room to add paid options later (open-core):
 
-- **Free** — local visual search: folder indexing, exact-moment results, in-app playback.
-  Drives the funnel (demoed via the YouTube channel).
-- **Pro** — search by spoken words (on-device Whisper), cloud-accelerated indexing for huge
-  or older libraries, sync, advanced export, "find similar moments."
-- **Enterprise (later)** — shared team indexes, self-host/on-prem, SSO, admin, support.
+- **Core (open)** — local visual search: folder indexing, exact-moment results, playback,
+  export, find-similar. Free and open.
+- **Possible Pro later** — on-device Whisper audio search, cloud-accelerated indexing for
+  huge/older libraries, sync. Optional, additive — the core stays open.
 
-Distribution: **direct** (Lemon Squeezy / Paddle as merchant of record + Sparkle updates),
-with Setapp and the Mac App Store as follow-on channels.
+Promoted via the YouTube channel; distributed direct (notarized + Sparkle).
 
 ## Roadmap (short)
 
@@ -67,4 +65,4 @@ Then click **Add Folder…** and pick a folder of videos. (Dev shortcut: set
 
 ## License
 
-Proprietary. © 2026 Ivan Kuria. All rights reserved. See [`LICENSE`](LICENSE).
+[GPL-3.0](LICENSE). © 2026 Ivan Kuria.

@@ -2,7 +2,7 @@
 
 ## Context
 
-**Tafuta** ("find" in Kiswahili) is a **proprietary, commercial** macOS app that finds a specific
+**Tafuta** ("find" in Kiswahili) is an **open-source (GPL-3.0)** macOS app that finds a specific
 *moment* inside your own videos by describing it in plain language — type
 *"woman wearing white blouse in green meadow"* and jump straight to that second, even if the
 file is named `IMG_0423.mov`.
@@ -23,10 +23,9 @@ infrastructure. **v1 = (a) only.**
 - **Granularity:** Return the *exact moment/timestamp*, not just the file.
 - **Modality:** Visual only for v1 (audio transcription deferred).
 - **Inference:** **On-device** (research-backed below).
-- **Licensing/business:** **Proprietary / closed (private repo). Freemium + Pro
-  subscription** for recurring MRR. Free tier = local visual search (YouTube funnel); Pro =
-  Whisper audio search, cloud-accelerated indexing, sync, advanced export. Enterprise/
-  self-host later. Distribution: **direct** (Lemon Squeezy/Paddle + Sparkle), then Setapp/MAS.
+- **Licensing/business:** **Open source (GPL-3.0), public repo.** Core app free + open;
+  room to add a paid Pro/cloud tier later (open-core) — Whisper audio search,
+  cloud-accelerated indexing, sync. Distribution: **direct** (notarized + Sparkle); YouTube funnel.
 - **App shape:** **Both** — a full main window AND a Raycast/Spotlight-style global-hotkey
   floating launcher, sharing one search engine.
 - **Design north star:** **Linear** — minimal, premium, near-monochrome, no gradients.
@@ -165,7 +164,7 @@ controls), **Notion Calendar** (light/dark parity), **Arc** (materials/motion po
 
 ## Cost & business model
 
-**Proprietary, freemium → Pro subscription (recurring MRR).** Repo is private.
+**Open source (GPL-3.0), public repo — open-core with room for paid later.**
 
 - **Free tier:** local visual search (folder indexing, exact-moment results, in-app
   playback). The free magic is the marketing — demoed on the YouTube channel.
