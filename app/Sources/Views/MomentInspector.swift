@@ -24,8 +24,9 @@ struct MomentInspector: View {
             .padding(Space.l)
         }
         .task(id: moment.id) {
-            sameVideo = search.sameVideo(of: moment)
-            similarMoments = search.similar(to: moment)
+            let (same, sim) = await search.relatedMoments(to: moment)
+            sameVideo = same
+            similarMoments = sim
         }
         .onAppear {
             loadCurrentMoment()

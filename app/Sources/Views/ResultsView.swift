@@ -5,9 +5,28 @@ import SwiftUI
 struct ResultsView: View {
     @EnvironmentObject var search: SearchCore
 
-    private let columns = [GridItem(.adaptive(minimum: 220, maximum: 300), spacing: Space.l)]
+    private let columns = [GridItem(.adaptive(minimum: 240, maximum: 300), spacing: Space.xl)]
     @State private var columnCount = 3
     @State private var dropTargeted = false
+
+    // Build a result card with its action closures (no @EnvironmentObject in the card → only
+    // the changed cards re-render on selection; .equatable() enforces the skip).
+    private func card(_ result: SearchResult) -> some View {
+        ResultCard(
+            result: result,
+            selected: result.id == search.selectedID,
+            onSelect: { search.select(result) },
+            onPlay: { search.select(result); search.playInline() },
+            onFindSimilar: { search.findSimilar(to: result) },
+            onExport: { search.exportClip(result) },
+            onSaveFrame: { search.saveFrame(result) },
+            onCopyLink: { search.copyLink(result) },
+            onReveal: { search.reveal(result) },
+            onRemove: { search.removeFromIndex(result) }
+        )
+        .equatable()
+        .id(result.id)
+    }
 
     var body: some View {
         content
@@ -60,30 +79,26 @@ struct ResultsView: View {
     }
 
     private var flatGrid: some View {
-        LazyVGrid(columns: columns, spacing: Space.l) {
+        LazyVGrid(columns: columns, spacing: Space.xl) {
             ForEach(Array(search.results.enumerated()), id: \.element.id) { i, result in
-                ResultCard(result: result, selected: result.id == search.selectedID)
-                    .id(result.id)
-                    .modifier(StaggeredAppear(index: i))
+                card(result).modifier(StaggeredAppear(index: i))
             }
         }
-        .padding(Space.l)
+        .padding(Space.xl)
     }
 
     private var groupedGrid: some View {
-        LazyVStack(spacing: Space.m, pinnedViews: [.sectionHeaders]) {
+        LazyVStack(spacing: Space.l, pinnedViews: [.sectionHeaders]) {
             ForEach(search.groupedResults) { group in
                 Section {
                     if !search.collapsedVideos.contains(group.id) {
-                        LazyVGrid(columns: columns, spacing: Space.l) {
+                        LazyVGrid(columns: columns, spacing: Space.xl) {
                             ForEach(Array(group.items.enumerated()), id: \.element.id) { i, result in
-                                ResultCard(result: result, selected: result.id == search.selectedID)
-                                    .id(result.id)
-                                    .modifier(StaggeredAppear(index: i))
+                                card(result).modifier(StaggeredAppear(index: i))
                             }
                         }
-                        .padding(.horizontal, Space.l)
-                        .padding(.bottom, Space.m)
+                        .padding(.horizontal, Space.xl)
+                        .padding(.bottom, Space.l)
                     }
                 } header: {
                     VideoSectionHeader(
@@ -103,13 +118,13 @@ struct ResultsView: View {
             if let label = search.similarLabel {
                 Pill(text: label, systemImage: "square.on.square", tint: .textSecondary)
             }
-            Text("\(search.results.count) moments")
+            Text("\(search.results.count) result\(search.results.count == 1 ? "" : "s")")
                 .font(Typo.caption).foregroundStyle(Color.textTertiary)
             Spacer()
-            Text("↑↓ navigate · ↵ play · ⌘I inspector")
+            Text("↑↓ navigate · ↵ play · ⌘I details")
                 .font(.system(size: 10, weight: .medium)).foregroundStyle(Color.textTertiary)
         }
-        .padding(.horizontal, Space.l).padding(.top, Space.m)
+        .padding(.horizontal, Space.xl).padding(.top, Space.l)
     }
 
     private var skeletonGrid: some View {
@@ -138,7 +153,7 @@ struct ResultsView: View {
     }
 
     private func updateColumns(_ width: CGFloat) {
-        columnCount = max(1, Int(width / (236 + Space.l)))
+        columnCount = max(1, Int(width / (240 + Space.xl)))
     }
 }
 
@@ -187,20 +202,20 @@ struct EmptyState: View {
                 icon("exclamationmark.triangle"); title("Couldn’t load the search model"); subtitle(err)
             } else if !search.hasIndex {
                 IconChip(systemName: "sparkle.magnifyingglass", tint: .brand, size: 64)
-                title(search.isIndexing ? "Indexing…" : "Add your videos")
+                title(search.isIndexing ? "Indexing your videos…" : "Add your videos")
                 subtitle(search.isIndexing
-                         ? "\(search.indexedCount) moments indexed so far…"
-                         : "Point Tafuta at a folder of videos — or drag them in. Everything stays on your Mac.")
+                         ? "You can search as soon as the first results come in."
+                         : "Point Tafuta at a folder of videos — or just drag them in. Everything stays on your Mac.")
                 if !search.isIndexing {
-                    Button { search.addFolder() } label: { Text("Choose Folder…") }
+                    Button { search.addFolder() } label: { Text("Add Videos…") }
                         .buttonStyle(PrimaryButtonStyle())
                 }
             } else if search.hasQuery {
                 icon("magnifyingglass"); title("No matches")
-                subtitle("Try loosening strictness or rephrasing.")
+                subtitle("Try a broader description, or lower the match precision.")
             } else {
                 icon("sparkle.magnifyingglass"); title("Search inside your videos")
-                subtitle("\(search.indexedCount) moments ready. Try one:")
+                subtitle("Describe a moment and Tafuta finds it. Try one:")
                 FlowExamples(examples: search.examples) { search.runExample($0) }
                     .frame(maxWidth: 460)
                 if !search.recentSearches.isEmpty {

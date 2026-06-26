@@ -1,12 +1,25 @@
 import SwiftUI
 
-// A moment result: real frame thumbnail + filename + relevance pill + Finder action.
-// Click to play; hover for quick actions; right-click for the full menu; drag the frame out.
-struct ResultCard: View {
-    @EnvironmentObject var search: SearchCore
+// A moment result card. Takes plain values + action closures (no @EnvironmentObject), and is
+// Equatable on (id, selected) so changing the grid selection only re-renders the two affected
+// cards — not all of them. This is the main fix for the janky inspector-open animation.
+struct ResultCard: View, Equatable {
     let result: SearchResult
     var selected: Bool = false
+    var onSelect: () -> Void = {}
+    var onPlay: () -> Void = {}
+    var onFindSimilar: () -> Void = {}
+    var onExport: () -> Void = {}
+    var onSaveFrame: () -> Void = {}
+    var onCopyLink: () -> Void = {}
+    var onReveal: () -> Void = {}
+    var onRemove: () -> Void = {}
+
     @State private var hovering = false
+
+    static func == (l: ResultCard, r: ResultCard) -> Bool {
+        l.result.id == r.result.id && l.selected == r.selected
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
@@ -20,33 +33,29 @@ struct ResultCard: View {
             HStack(spacing: Space.xs) {
                 Pill(text: "\(Int(result.normalizedScore * 100))% match", tint: .brand, filled: true)
                 Spacer(minLength: 0)
-                Button { search.reveal(result) } label: {
-                    Pill(text: "Finder", systemImage: "folder")
-                }
-                .buttonStyle(.plain)
-                .help("Reveal in Finder")
+                Button(action: onReveal) { Pill(text: "Finder", systemImage: "folder") }
+                    .buttonStyle(.plain).help("Reveal in Finder")
             }
         }
         .padding(Space.m)
         .cardStyle(fill: .bgSurface,
-                   border: selected ? .brand : (hovering ? .borderStrong : .borderSubtle))
+                   border: selected ? .brand : (hovering ? .borderStrong : .borderDefault))
         .overlay {
             if selected {
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                     .strokeBorder(Color.brand, lineWidth: 2)
             }
         }
-        .softShadow(hovering || selected ? 2 : 0)
+        .softShadow(hovering || selected ? 2 : 1)
         .scaleEffect(hovering ? 1.01 : 1.0)
         .animation(Motion.quick, value: hovering)
-        .onHover { hovering = $0 }
         .contentShape(Rectangle())
-        .onTapGesture { search.select(result) }
+        .onHover { hovering = $0 }
+        .onTapGesture(perform: onSelect)
         .onDrag { NSItemProvider(object: result.thumbnail) }
         .contextMenu { menu }
     }
 
-    // Fixed 16:9 frame — overlays must NOT stretch it (use .overlay, not a sizing ZStack).
     private var thumbnail: some View {
         Image(nsImage: result.thumbnail)
             .resizable()
@@ -68,9 +77,9 @@ struct ResultCard: View {
 
     private var hoverActions: some View {
         HStack(spacing: 2) {
-            iconButton("play.fill") { search.select(result); search.playInline() }
-            iconButton("square.on.square") { search.findSimilar(to: result) }
-            iconButton("scissors") { search.exportClip(result) }
+            iconButton("play.fill", action: onPlay)
+            iconButton("square.on.square", action: onFindSimilar)
+            iconButton("scissors", action: onExport)
         }
         .padding(3)
         .background(.ultraThinMaterial, in: Capsule())
@@ -101,15 +110,15 @@ struct ResultCard: View {
     }
 
     @ViewBuilder private var menu: some View {
-        Button { search.select(result) } label: { Label("Show in Inspector", systemImage: "sidebar.right") }
-        Button { search.select(result); search.playInline() } label: { Label("Play at \(result.timecode)", systemImage: "play.fill") }
-        Button { search.findSimilar(to: result) } label: { Label("Find Similar Moments", systemImage: "square.on.square") }
+        Button(action: onSelect) { Label("Show Details", systemImage: "sidebar.right") }
+        Button(action: onPlay) { Label("Play at \(result.timecode)", systemImage: "play.fill") }
+        Button(action: onFindSimilar) { Label("Find Similar Moments", systemImage: "square.on.square") }
         Divider()
-        Button { search.exportClip(result) } label: { Label("Export Clip…", systemImage: "scissors") }
-        Button { search.saveFrame(result) } label: { Label("Save Frame…", systemImage: "photo") }
-        Button { search.copyLink(result) } label: { Label("Copy Timestamp Link", systemImage: "link") }
+        Button(action: onExport) { Label("Export Clip…", systemImage: "scissors") }
+        Button(action: onSaveFrame) { Label("Save Frame…", systemImage: "photo") }
+        Button(action: onCopyLink) { Label("Copy Timestamp Link", systemImage: "link") }
         Divider()
-        Button { search.reveal(result) } label: { Label("Reveal in Finder", systemImage: "folder") }
-        Button(role: .destructive) { search.removeFromIndex(result) } label: { Label("Remove from Index", systemImage: "trash") }
+        Button(action: onReveal) { Label("Reveal in Finder", systemImage: "folder") }
+        Button(role: .destructive, action: onRemove) { Label("Remove", systemImage: "trash") }
     }
 }

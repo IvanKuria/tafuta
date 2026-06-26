@@ -11,8 +11,8 @@ struct MenuBarView: View {
                 Image(systemName: search.isIndexing ? "arrow.triangle.2.circlepath" : "checkmark.circle")
                     .foregroundStyle(search.isIndexing ? Color.brand : Color.textTertiary)
                 Text(search.isIndexing
-                     ? "Indexing… \(search.indexedCount)"
-                     : (search.hasIndex ? "\(search.indexedCount) moments ready" : "No library yet"))
+                     ? "Indexing…"
+                     : (search.hasIndex ? "Ready" : "No videos yet"))
                     .font(.system(size: 13, weight: .medium))
             }
 
@@ -25,5 +25,6 @@ struct MenuBarView: View {
         }
         .padding(Space.m)
         .frame(width: 240)
+        .tint(Color.brand)
     }
 }

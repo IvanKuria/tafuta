@@ -14,20 +14,9 @@ extension Color {
     static let textSecondary     = Color("TextSecondary")
     static let textTertiary      = Color("TextTertiary")
     static let accentFg          = Color("AccentFg")
-    // Brand accent referenced *literally* (indigo), so it ignores the user's system accent
-    // override. Use `.brand` for branded elements; `.tint(.brand)` makes native controls match.
+    // Near-monochrome graphite accent, referenced literally so it ignores the macOS system
+    // accent. Apply `.tint(.brand)` on every scene so no control falls back to system purple.
     static let brand             = Color("AccentColor")
-}
-
-// A small, restrained tint set for icon chips — adds premium "colored icon" energy
-// without breaking the near-monochrome system (used only inside IconChip backgrounds).
-enum Tint {
-    static let indigo = Color.brand
-    static let teal   = Color(red: 0.28, green: 0.72, blue: 0.74)
-    static let amber  = Color(red: 0.93, green: 0.69, blue: 0.33)
-    static let pink   = Color(red: 0.91, green: 0.45, blue: 0.58)
-    static let green  = Color(red: 0.40, green: 0.74, blue: 0.50)
-    static let violet = Color(red: 0.65, green: 0.50, blue: 0.92)
 }
 
 // 8px spacing scale.
@@ -41,13 +30,13 @@ enum Space {
     static let xxl: CGFloat = 32
 }
 
-// Continuous (squircle) radii.
+// Continuous (squircle) radii — one consistent family across the whole app.
+// tag = tiny tags; control = fields/buttons/thumbnails; card = result cards; sheet = panels.
 enum Radius {
-    static let tag:     CGFloat = 4
-    static let chip:    CGFloat = 7
-    static let control: CGFloat = 6
-    static let card:    CGFloat = 10
-    static let sheet:   CGFloat = 14
+    static let tag:     CGFloat = 6
+    static let control: CGFloat = 8
+    static let card:    CGFloat = 12
+    static let sheet:   CGFloat = 16
 }
 
 // Fast, non-bouncy motion + one signature spring for "arrival" moments.

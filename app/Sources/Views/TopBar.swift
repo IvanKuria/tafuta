@@ -49,12 +49,12 @@ struct TopBar: View {
         if search.isIndexing {
             HStack(spacing: Space.xs) {
                 ProgressView().controlSize(.mini)
-                Pill(text: "Indexing \(search.indexedCount)")
+                Pill(text: "Indexing…")
             }
         } else if search.hasIndex {
-            Pill(text: "\(search.indexedCount) moments")
+            Pill(text: "Ready", systemImage: "checkmark.circle")
         } else {
-            Pill(text: "No library")
+            Pill(text: "No videos yet")
         }
     }
 

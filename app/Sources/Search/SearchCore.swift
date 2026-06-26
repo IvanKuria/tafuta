@@ -73,8 +73,8 @@ final class SearchCore: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Index Folder"
-        panel.message = "Choose a folder of videos to index. Everything stays on your Mac."
+        panel.prompt = "Add Videos"
+        panel.message = "Choose a folder of videos to search. Everything stays on your Mac."
         if panel.runModal() == .OK, let url = panel.url { indexFolder(url, remember: true) }
     }
 
@@ -187,22 +187,36 @@ final class SearchCore: ObservableObject {
 
     // MARK: - Related moments (over the full frame set)
 
-    func sameVideo(of r: SearchResult, limit: Int = 12) -> [SearchResult] {
-        frames.filter { $0.videoURL == r.videoURL && $0.id != r.frame.id }
-            .sorted { $0.timestamp < $1.timestamp }
-            .prefix(limit)
-            .map { frame in
-                let s = queryVector.map { Double(Embedder.cosine($0, frame.vector)) } ?? 0
-                return SearchResult(frame: frame, score: s)
-            }
+    private struct FrameSnap: Sendable {
+        let id: UUID; let vector: [Float]; let videoPath: String; let timestamp: Double
     }
 
-    func similar(to r: SearchResult, limit: Int = 12) -> [SearchResult] {
-        frames.filter { $0.id != r.frame.id }
-            .map { SearchResult(frame: $0, score: Double(Embedder.cosine(r.frame.vector, $0.vector))) }
-            .sorted { $0.score > $1.score }
-            .prefix(limit)
-            .map { $0 }
+    /// Related moments computed OFF the main thread (cosine over all frames), so opening the
+    /// inspector stays smooth. Returns (same video, visually similar).
+    func relatedMoments(to r: SearchResult, limit: Int = 12) async -> (same: [SearchResult], similar: [SearchResult]) {
+        let targetVec = r.frame.vector
+        let targetID = r.frame.id
+        let targetVideo = r.videoURL.standardizedFileURL.path
+        let qv = queryVector
+        let snaps = frames.map {
+            FrameSnap(id: $0.id, vector: $0.vector,
+                      videoPath: $0.videoURL.standardizedFileURL.path, timestamp: $0.timestamp)
+        }
+        let (sameIDs, simIDs) = await Task.detached(priority: .userInitiated) { () -> ([UUID], [UUID]) in
+            let same = snaps.filter { $0.videoPath == targetVideo && $0.id != targetID }
+                .sorted { $0.timestamp < $1.timestamp }.prefix(limit).map(\.id)
+            let sim = snaps.filter { $0.id != targetID }
+                .map { ($0.id, Embedder.cosine(targetVec, $0.vector)) }
+                .sorted { $0.1 > $1.1 }.prefix(limit).map(\.0)
+            return (Array(same), Array(sim))
+        }.value
+        let byID = Dictionary(frames.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        func toResult(_ id: UUID) -> SearchResult? {
+            guard let f = byID[id] else { return nil }
+            let s = qv.map { Double(Embedder.cosine($0, f.vector)) } ?? 0
+            return SearchResult(frame: f, score: s)
+        }
+        return (sameIDs.compactMap(toResult), simIDs.compactMap(toResult))
     }
 
     func removeFromIndex(_ r: SearchResult) {

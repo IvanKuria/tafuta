@@ -57,5 +57,6 @@ struct SettingsView: View {
         }
         .padding(Space.xl)
         .frame(width: 380)
+        .tint(Color.brand)
     }
 }

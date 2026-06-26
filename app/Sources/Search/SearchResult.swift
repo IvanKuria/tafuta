@@ -1,7 +1,9 @@
 import AppKit
 
 // A scored moment: the indexed frame plus its similarity to the current query.
-struct SearchResult: Identifiable {
+struct SearchResult: Identifiable, Equatable {
+    static func == (lhs: SearchResult, rhs: SearchResult) -> Bool { lhs.id == rhs.id }
+
     let id = UUID()
     let frame: IndexedFrame
     let score: Double
