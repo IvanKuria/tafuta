@@ -57,6 +57,8 @@ roll out of control) where filenames and dates are useless for finding that one 
 
 ## How it works
 
+0. On first launch, Tafuta downloads the MobileCLIP models (about 108MB) once and caches them
+   locally. After that everything runs offline.
 1. Point Tafuta at a folder of videos.
 2. It samples frames (roughly one per second, with scene change deduplication) and encodes
    each frame into a 512 dimension vector using MobileCLIP on the Neural Engine.
@@ -79,11 +81,13 @@ Requires macOS 14 or later on Apple Silicon.
 Requires macOS on Apple Silicon, Xcode, and XcodeGen (`brew install xcodegen`).
 
 ```sh
-./tools/fetch_models.sh          # download MobileCLIP S0 Core ML models (gitignored, ~120MB)
 cd app && xcodegen generate
 xcodebuild -scheme Tafuta -configuration Debug build
 open Tafuta.xcodeproj            # or open in Xcode and Run
 ```
+
+The MobileCLIP models are downloaded automatically on first launch, so no separate fetch step is
+needed. If you prefer to pre-download them (for offline builds), run `./tools/fetch_models.sh`.
 
 Then click "Add Folder" and pick a folder of videos. For development you can set
 `TAFUTA_INDEX_DIR=/path/to/videos` to auto index a folder on launch.

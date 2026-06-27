@@ -29,6 +29,10 @@ targets:
     sources:
       - path: Sources
       - path: Resources
+        # Models are downloaded on first run (ModelManager), not bundled, to keep the app small.
+        excludes:
+          - "Models/**"
+          - "Models"
     settings:
       base:
         PRODUCT_NAME: Tafuta

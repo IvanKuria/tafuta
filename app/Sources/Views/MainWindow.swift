@@ -16,7 +16,9 @@ struct MainWindow: View {
         ZStack {
             GlassCanvas()
 
-            if !search.hasIndex && !search.isIndexing {
+            if search.isPreparingModel {
+                ModelPrepCanvas()
+            } else if !search.hasIndex && !search.isIndexing {
                 FirstRunCanvas()
             } else {
                 SearchStage()
@@ -183,6 +185,48 @@ private struct FirstRunCanvas: View {
             Spacer()
             Spacer()
         }
+    }
+}
+
+// First-launch model download. The CLIP models are fetched on demand (not bundled), so this
+// shows once while ~108MB downloads and compiles on the Neural Engine.
+private struct ModelPrepCanvas: View {
+    @EnvironmentObject private var search: SearchCore
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TopChrome()
+            Spacer()
+            VStack(spacing: Space.m) {
+                BrandGlyph()
+                    .padding(.bottom, Space.s)
+                Text("Setting up Tafuta")
+                    .font(.system(size: 26, weight: .semibold))
+                    .tracking(-0.3)
+                Text("Downloading the on-device search model. This happens once and stays private to your Mac.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 380)
+                    .padding(.bottom, Space.s)
+
+                ProgressView(value: search.modelProgress)
+                    .progressViewStyle(.linear)
+                    .tint(.white)
+                    .frame(width: 280)
+                Text(progressLabel)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+                    .monospacedDigit()
+            }
+            Spacer()
+            Spacer()
+        }
+    }
+
+    private var progressLabel: String {
+        let pct = Int((search.modelProgress * 100).rounded())
+        return "\(search.modelStatusText) \(pct)%"
     }
 }
 

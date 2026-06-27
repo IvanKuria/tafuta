@@ -39,6 +39,11 @@ final class SearchCore: ObservableObject {
     @Published var statusText: String = ""
     @Published var loadError: String? = nil
 
+    // First-run model download (models are fetched on demand, not bundled).
+    @Published var isPreparingModel: Bool = false
+    @Published var modelProgress: Double = 0
+    @Published var modelStatusText: String = "Downloading search model…"
+
     // Inspector preview (replaces the old modal player).
     @Published var inspectorMoment: SearchResult? = nil
     @Published var isPlayingInline: Bool = false
@@ -66,7 +71,7 @@ final class SearchCore: ObservableObject {
     private var frames: [IndexedFrame] = []
     private var indexedVideoPaths = Set<String>()
     private var queryVector: [Float]?
-    private let embedder: Embedder?
+    private var embedder: Embedder?
     private var macScanStarted = false
 
     // Metadata (filename/folder) only acts as a near-tie tie-breaker, never overriding semantics:
@@ -75,8 +80,39 @@ final class SearchCore: ObservableObject {
     private var lastSuppressed: [SearchResult] = []  // top sub-threshold results, ready for "show closest"
 
     init() {
+        Task { await bootstrap() }
+    }
+
+    // Ensure the on-device models are present (downloading on first run), then load the embedder
+    // and kick off any initial indexing. Runs on the main actor; the download itself runs off-main.
+    private func bootstrap() async {
+        if ModelManager.allModelsAvailable {
+            makeEmbedder()
+        } else {
+            isPreparingModel = true
+            do {
+                try await ModelManager.ensureModels { [weak self] frac, label in
+                    Task { @MainActor in
+                        self?.modelProgress = frac
+                        if !label.isEmpty { self?.modelStatusText = label }
+                    }
+                }
+                makeEmbedder()
+            } catch {
+                loadError = "Couldn’t download the search model. Check your connection and reopen Tafuta."
+            }
+            isPreparingModel = false
+        }
+        startInitialIndexing()
+    }
+
+    private func makeEmbedder() {
         do { embedder = try Embedder() }
         catch { embedder = nil; loadError = "Failed to load model: \(error)" }
+    }
+
+    private func startInitialIndexing() {
+        guard embedder != nil else { return }
         for folder in FolderBookmarks.savedFolders() { indexFolder(folder, remember: false) }
         if let dir = ProcessInfo.processInfo.environment["TAFUTA_INDEX_DIR"] {
             indexFolder(URL(fileURLWithPath: (dir as NSString).expandingTildeInPath))

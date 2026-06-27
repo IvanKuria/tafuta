@@ -14,8 +14,17 @@ final class Embedder {
 
     init() throws {
         func load(_ name: String) throws -> MLModel {
-            guard let url = Bundle.main.url(forResource: name, withExtension: "mlmodelc") else {
-                throw EmbedderError.missingModel(name)
+            // Prefer a bundled model (dev builds may bundle it); otherwise use the copy that
+            // ModelManager downloaded and compiled into Application Support on first run.
+            let url: URL
+            if let bundled = Bundle.main.url(forResource: name, withExtension: "mlmodelc") {
+                url = bundled
+            } else {
+                let cached = ModelManager.compiledURL(name)
+                guard FileManager.default.fileExists(atPath: cached.path) else {
+                    throw EmbedderError.missingModel(name)
+                }
+                url = cached
             }
             let cfg = MLModelConfiguration()
             cfg.computeUnits = .cpuAndNeuralEngine
