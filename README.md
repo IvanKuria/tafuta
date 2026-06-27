@@ -1,55 +1,80 @@
+<div align="center">
+
+<img src="docs/assets/icon.png" width="128" alt="Tafuta app icon" />
+
 # Tafuta
 
 **Find the moment, not just the file.**
 
-Tafuta (Kiswahili for *"find"*) is a macOS app that lets you search **inside** your own
-videos with plain language. Describe a moment — *"woman wearing a white blouse in a green
-meadow"* — and Tafuta jumps straight to that second of the clip, even if the file is named
-`IMG_0423.mov`.
+Semantic video search for macOS. Fully on device.
 
-> **Open source (GPLv3).** Free and open. A paid Pro/cloud tier may be offered later
-> (open-core) — the core app stays open. See [`LICENSE`](LICENSE).
+[Download](https://github.com/IvanKuria/tafuta/releases/latest) ·
+[Building from source](#building-from-source) ·
+[Architecture](docs/PLAN.md) ·
+[License](LICENSE)
 
-It's built for people with large video libraries (creators, filmmakers, anyone with a
-camera roll out of control) where filenames and dates are useless for finding *that one
-shot*.
+</div>
 
-## Why it's different
+---
 
-- **It searches what's on screen, not the filename.** Powered by on-device CLIP-style
-  embeddings (Apple's MobileCLIP via Core ML), Tafuta understands the *content* of each frame.
-- **100% on your Mac.** All indexing and search run locally on the Apple Neural Engine. No
-  uploads, no account, no telemetry. Your video never leaves your device.
+Tafuta (Kiswahili for "find") lets you search inside your own videos with plain language.
+Describe a moment, for example "woman wearing a white blouse in a green meadow", and Tafuta
+jumps straight to that second of the clip even if the file is named `IMG_0423.mov`.
+
+It is built for people with large video libraries (creators, filmmakers, anyone with a camera
+roll out of control) where filenames and dates are useless for finding that one shot.
+
+## Screenshots
+
+<div align="center">
+
+<img src="docs/assets/search-empty.png" width="80%" alt="Tafuta search home with the mascot" />
+
+<br /><br />
+
+<img src="docs/assets/results.png" width="80%" alt="Search results grouped by video" />
+
+<br /><br />
+
+<img src="docs/assets/inspector.png" width="80%" alt="Moment inspector with playback and details" />
+
+<br /><br />
+
+<img src="docs/assets/launcher.png" width="70%" alt="Global hotkey quick launcher" />
+
+</div>
+
+## Why it is different
+
+- **It searches what is on screen, not the filename.** Powered by on device CLIP style
+  embeddings (Apple's MobileCLIP via Core ML), Tafuta understands the content of each frame.
+- **Everything stays on your Mac.** All indexing and search run locally on the Apple Neural
+  Engine. No uploads, no account, no telemetry. Your video never leaves your device.
 - **Jumps to the exact moment.** Results are timestamps inside videos, not just a list of
-  files — click and playback starts right there.
-- **Fast, minimal, native.** A premium SwiftUI interface with a main window and a
-  global-hotkey launcher, in polished light and dark modes.
+  files. Click a result and playback starts right there.
+- **Fast, minimal, native.** A polished SwiftUI interface with a main window and a global
+  hotkey launcher, in light and dark modes.
 
-## Status
+## How it works
 
-🚧 **Early development.** Currently validating the core (Phase 0 spike): MobileCLIP retrieval
-quality and indexing throughput on Apple Silicon. See [`docs/PLAN.md`](docs/PLAN.md) for the
-full architecture, design system, and roadmap.
+1. Point Tafuta at a folder of videos.
+2. It samples frames (roughly one per second, with scene change deduplication) and encodes
+   each frame into a 512 dimension vector using MobileCLIP on the Neural Engine.
+3. Vectors and metadata are stored locally on your internal disk, so search keeps working even
+   when an external drive is unplugged.
+4. When you type a query, Tafuta encodes the text into the same vector space and runs a nearest
+   neighbor search to rank matching moments.
 
-## Model
+## Install
 
-**Open source now (GPLv3)**, with room to add paid options later (open-core):
+Download the latest notarized build from the
+[Releases page](https://github.com/IvanKuria/tafuta/releases/latest), open the disk image, and
+drag Tafuta to your Applications folder. The build is signed with a Developer ID and notarized
+by Apple, so it launches without Gatekeeper warnings.
 
-- **Core (open)** — local visual search: folder indexing, exact-moment results, playback,
-  export, find-similar. Free and open.
-- **Possible Pro later** — on-device Whisper audio search, cloud-accelerated indexing for
-  huge/older libraries, sync. Optional, additive — the core stays open.
+Requires macOS 14 or later on Apple Silicon.
 
-Promoted via the YouTube channel; distributed direct (notarized + Sparkle).
-
-## Roadmap (short)
-
-- **v1** — local semantic video search: folder indexing, exact-moment results, hover-scrub
-  preview, in-app playback, export/drag clips, "find similar moments."
-- **Later** — Whisper audio search, image-query mode, saved smart folders, cloud tier,
-  licensing/billing, enterprise.
-
-## Building
+## Building from source
 
 Requires macOS on Apple Silicon, Xcode, and XcodeGen (`brew install xcodegen`).
 
@@ -60,9 +85,28 @@ xcodebuild -scheme Tafuta -configuration Debug build
 open Tafuta.xcodeproj            # or open in Xcode and Run
 ```
 
-Then click **Add Folder…** and pick a folder of videos. (Dev shortcut: set
-`TAFUTA_INDEX_DIR=/path/to/videos` to auto-index a folder on launch.)
+Then click "Add Folder" and pick a folder of videos. For development you can set
+`TAFUTA_INDEX_DIR=/path/to/videos` to auto index a folder on launch.
+
+## Roadmap
+
+- **v1**: local semantic video search, folder indexing, exact moment results, hover scrub
+  preview, in app playback, export and drag clips, find similar moments.
+- **Later**: Whisper audio search, image query mode, saved smart folders, and an optional
+  cloud tier for accelerated indexing of very large libraries.
+
+## Project model
+
+Tafuta is open source under GPLv3, and the core app stays open. An optional Pro or cloud tier
+may be offered later (open core) for power features such as on device audio search and cloud
+accelerated indexing. The local search experience is and remains free.
+
+## Contributing
+
+Contributions are welcome. Please open an issue to discuss substantial changes before sending a
+pull request. Build the project from source as described above, keep changes focused, and match
+the existing code style.
 
 ## License
 
-[GPL-3.0](LICENSE). © 2026 Ivan Kuria.
+[GPL-3.0](LICENSE). Copyright 2026 Ivan Kuria.
