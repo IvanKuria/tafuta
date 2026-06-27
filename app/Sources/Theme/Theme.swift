@@ -40,7 +40,7 @@ enum Radius {
     static let sheet:   CGFloat = 16   // launcher / panels
 }
 
-// Fast, non-bouncy motion + one signature spring for "arrival" moments.
+// Native-feeling motion: quick enough for keyboard browsing, with a gentle spring for arrivals.
 enum Motion {
     static let quick    = Animation.easeOut(duration: 0.14)
     static let standard = Animation.easeOut(duration: 0.20)
@@ -48,14 +48,14 @@ enum Motion {
     static let gentle    = Animation.easeInOut(duration: 0.9)
 }
 
-// Type ramp on Inter (with ss03) — Raycast's typographic identity.
+// Type ramp on the platform font. The app should feel at home beside Finder, Photos, and QuickTime.
 enum Typo {
-    static let title   = Font.inter(22, .semibold)
-    static let title3  = Font.inter(15, .semibold)
-    static let body    = Font.inter(13, .regular)
-    static let callout = Font.inter(13, .medium)
-    static let caption = Font.inter(11, .medium)
-    static let mono    = Font.inter(11, .semibold).monospacedDigit()
+    static let title   = Font.title2.weight(.semibold)
+    static let title3  = Font.subheadline.weight(.semibold)
+    static let body    = Font.callout
+    static let callout = Font.callout.weight(.medium)
+    static let caption = Font.caption.weight(.medium)
+    static let mono    = Font.caption.monospacedDigit().weight(.semibold)
 }
 
 extension View {

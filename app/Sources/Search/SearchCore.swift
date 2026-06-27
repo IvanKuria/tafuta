@@ -18,7 +18,22 @@ enum Grouping: String { case grouped, flat }
 final class SearchCore: ObservableObject {
     @Published var query: String = ""
     @Published var results: [SearchResult] = []
-    @Published var strictness: Double = 0.18           // cosine threshold; ~0.10 noise, ~0.25 strong
+    // Cosine threshold; ~0.10 noise, ~0.25 strong. Persisted; changing it re-ranks off the cached vector.
+    @Published var strictness: Double = UserDefaults.standard.object(forKey: "tafuta.strictness") as? Double ?? 0.18 {
+        didSet {
+            guard strictness != oldValue else { return }
+            UserDefaults.standard.set(strictness, forKey: "tafuta.strictness")
+            if queryVector != nil { rank() }            // re-filter using cached vector, no re-embed
+        }
+    }
+    // Active filters (date / duration / folder / file-type). Re-ranks live, never re-embeds.
+    @Published var filters = SearchFilters() {
+        didSet {
+            guard filters != oldValue else { return }
+            if queryVector != nil { rank() }
+        }
+    }
+    @Published private(set) var bestCosine: Double = 0  // top RAW cosine of the current query (0 = none)
     @Published var isIndexing: Bool = false
     @Published var indexedCount: Int = 0
     @Published var statusText: String = ""
@@ -52,6 +67,12 @@ final class SearchCore: ObservableObject {
     private var indexedVideoPaths = Set<String>()
     private var queryVector: [Float]?
     private let embedder: Embedder?
+    private var macScanStarted = false
+
+    // Metadata (filename/folder) only acts as a near-tie tie-breaker, never overriding semantics:
+    private static let metaBand: Float = 0.05   // eligible only within 0.05 cosine of the best frame
+    private static let metaMax:  Float = 0.02   // max affinity nudge (< a typical meaningful cosine gap)
+    private var lastSuppressed: [SearchResult] = []  // top sub-threshold results, ready for "show closest"
 
     init() {
         do { embedder = try Embedder() }
@@ -66,7 +87,45 @@ final class SearchCore: ObservableObject {
     var hasIndex: Bool { !frames.isEmpty }
     var hasResults: Bool { !results.isEmpty }
 
+    // Filter facets derived from what's actually indexed, so the UI never offers an empty bucket.
+    var availableFolders: [URL] {
+        let dirs = Set(frames.map { $0.videoURL.deletingLastPathComponent().standardizedFileURL })
+        return dirs.sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+    var availableTypes: [String] {
+        Array(Set(frames.map { $0.videoURL.pathExtension.lowercased() })).sorted()
+    }
+
     // MARK: - Indexing
+
+    func indexMacVideos(force: Bool = false) {
+        if isIndexing || (macScanStarted && !force) { return }
+        macScanStarted = true
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser
+        let candidates: [URL?] = [
+            fm.urls(for: .moviesDirectory, in: .userDomainMask).first,
+            fm.urls(for: .downloadsDirectory, in: .userDomainMask).first,
+            fm.urls(for: .desktopDirectory, in: .userDomainMask).first,
+            fm.urls(for: .picturesDirectory, in: .userDomainMask).first,
+            fm.urls(for: .documentDirectory, in: .userDomainMask).first,
+            home,
+        ]
+        let folders = Array(Set(candidates.compactMap(\.self).map { $0.standardizedFileURL }))
+        let videos = folders
+            .flatMap { VideoIndexer.videoFiles(in: $0) }
+            .reduce(into: [String: URL]()) { unique, url in
+                unique[url.standardizedFileURL.path] = url
+            }
+            .values
+            .filter { !indexedVideoPaths.contains($0.standardizedFileURL.path) }
+        guard !videos.isEmpty else {
+            showToast("No new videos found", "magnifyingglass", .info)
+            return
+        }
+        showToast("Scanning this Mac for videos", "internaldrive", .info)
+        ingest(Array(videos))
+    }
 
     func addFolder() {
         let panel = NSOpenPanel()
@@ -141,27 +200,39 @@ final class SearchCore: ObservableObject {
         similarLabel = nil
         inspectorMoment = nil            // a fresh search closes the preview
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty, let embedder else { results = []; queryVector = nil; selectedID = nil; return }
+        guard !q.isEmpty, let embedder else {
+            results = []; queryVector = nil; selectedID = nil; bestCosine = 0; lastSuppressed = []; return
+        }
         searchGen += 1
         let gen = searchGen
         let threshold = Float(strictness)
-        let snaps = frames.map { ($0.id, $0.vector) }
+        // Filter on existing metadata BEFORE scoring; affinity captured per surviving frame.
+        let snaps = frames.filter { filters.matches($0) }
+            .map { ($0.id, $0.vector, metadataAffinity(for: $0, query: q)) }
 
         Task.detached(priority: .userInitiated) {
-            guard let qv = try? embedder.embed(text: q) else { return }
-            let top = snaps.map { ($0.0, Embedder.cosine(qv, $0.1)) }
-                .filter { $0.1 >= threshold }
-                .sorted { $0.1 > $1.1 }
-                .prefix(60)
-            let ids = top.map(\.0)
-            let scoreByID = Dictionary(top.map { ($0.0, Double($0.1)) }, uniquingKeysWith: { a, _ in a })
+            // Prompt-template ensemble: short queries land in a stronger region of text space.
+            guard let qv = try? embedder.embed(text: q, templates: Embedder.zeroShotTemplates) else { return }
+            let raw = snaps.map { (id: $0.0, cos: Embedder.cosine(qv, $0.1), meta: $0.2) }
+            let topCos = raw.map(\.cos).max() ?? 0
+            // Gated tie-breaker: affinity applies only to frames already within metaBand of the best.
+            let scored = raw.map { r -> (id: UUID, cos: Float, final: Float) in
+                let boost = (topCos - r.cos) <= Self.metaBand ? r.meta : 0
+                return (r.id, r.cos, r.cos + boost)
+            }
+            // Honest threshold on RAW cosine (not the boosted score) — no "show top anyway" fallback.
+            let kept = Array(scored.filter { $0.cos >= threshold }.sorted { $0.final > $1.final }.prefix(60))
+            let suppressed = Array(scored.sorted { $0.final > $1.final }.prefix(60))
             await MainActor.run {
                 guard gen == self.searchGen else { return }   // a newer query superseded this one
                 self.queryVector = qv
+                self.bestCosine = Double(topCos)
                 let byID = Dictionary(self.frames.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-                let ranked = ids.compactMap { id -> SearchResult? in
-                    byID[id].map { SearchResult(frame: $0, score: scoreByID[id] ?? 0) }
+                func build(_ rows: [(id: UUID, cos: Float, final: Float)]) -> [SearchResult] {
+                    rows.compactMap { row in byID[row.id].map { SearchResult(frame: $0, score: Double(row.final)) } }
                 }
+                let ranked = build(kept)
+                self.lastSuppressed = build(suppressed)
                 withAnimation(Motion.standard) { self.results = ranked }
                 self.selectedID = ranked.first?.id
                 if record, !ranked.isEmpty { self.addRecent(q) }
@@ -169,14 +240,44 @@ final class SearchCore: ObservableObject {
         }
     }
 
-    func runExample(_ q: String) { query = q; runSearch(record: true) }
+    /// Reveal the best sub-threshold matches when a query produced no confident results.
+    func revealClosest() {
+        withAnimation(Motion.standard) { results = lastSuppressed }
+        selectedID = lastSuppressed.first?.id
+    }
 
+    func runExample(_ q: String) {
+        query = q
+        if !hasIndex, !isIndexing { indexMacVideos() }
+        runSearch(record: true)
+    }
+
+    // Shared re-rank path (streaming batches, strictness/filter changes, find-similar). Reuses the
+    // cached queryVector — never re-embeds. Math MUST stay identical to runSearch's detached body.
     private func rank() {
-        guard let qv = queryVector else { results = []; selectedID = nil; return }
-        let scored = frames.map { SearchResult(frame: $0, score: Double(Embedder.cosine(qv, $0.vector))) }
-        let ranked = Array(scored.filter { $0.score >= strictness }
-                                 .sorted { $0.score > $1.score }
-                                 .prefix(60))
+        guard let qv = queryVector else {
+            results = []; selectedID = nil; bestCosine = 0; lastSuppressed = []; return
+        }
+        let isSimilar = similarLabel != nil
+        let threshold = Float(strictness)
+        let work = frames.filter { filters.matches($0) }
+        let raw = work.map { frame -> (frame: IndexedFrame, cos: Float, meta: Float) in
+            let meta = isSimilar ? 0 : metadataAffinity(for: frame, query: query)
+            return (frame, Embedder.cosine(qv, frame.vector), meta)
+        }
+        let topCos = raw.map(\.cos).max() ?? 0
+        bestCosine = Double(topCos)
+        let scored = raw.map { r -> (frame: IndexedFrame, cos: Float, final: Float) in
+            let boost = (topCos - r.cos) <= Self.metaBand ? r.meta : 0
+            return (r.frame, r.cos, r.cos + boost)
+        }
+        let sortedAll = scored.sorted { $0.final > $1.final }
+        lastSuppressed = sortedAll.prefix(60).map { SearchResult(frame: $0.frame, score: Double($0.final)) }
+        // Find-similar (image→image) browses freely — text strictness must not blank it.
+        let visible = isSimilar
+            ? Array(sortedAll.prefix(60))
+            : Array(scored.filter { $0.cos >= threshold }.sorted { $0.final > $1.final }.prefix(60))
+        let ranked = visible.map { SearchResult(frame: $0.frame, score: Double($0.final)) }
         withAnimation(Motion.standard) { results = ranked }
         selectedID = ranked.first?.id
         if !ranked.isEmpty, hasQuery { addRecent(query) }
@@ -206,11 +307,43 @@ final class SearchCore: ObservableObject {
 
     /// Image-to-image: rank by similarity to a chosen frame; keeps the inspector open.
     func findSimilar(to r: SearchResult) {
-        query = ""
         queryVector = r.frame.vector
         similarLabel = "Similar to \(r.videoName) @ \(r.timecode)"
         rank()
         inspect(r)
+    }
+
+    // Filename/folder keyword affinity. Capped tiny (metaMax) so it can only break near-ties, not
+    // override a clearly-better semantic match. Applied gated-by-metaBand in runSearch/rank.
+    private func metadataAffinity(for frame: IndexedFrame, query: String) -> Float {
+        let terms = metadataTerms(for: query)
+        guard !terms.isEmpty else { return 0 }
+        let parent = frame.videoURL.deletingLastPathComponent().lastPathComponent
+        let haystack = "\(frame.videoName) \(parent)"
+            .lowercased()
+            .replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression)
+
+        var matched = 0
+        for term in terms where haystack.contains(term) { matched += 1 }
+        guard matched > 0 else { return 0 }
+        return min(Self.metaMax, 0.012 + Float(matched - 1) * 0.004)
+    }
+
+    private func metadataTerms(for query: String) -> Set<String> {
+        let normalized = query
+            .lowercased()
+            .replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression)
+        let words = normalized.split(separator: " ").map(String.init)
+            .filter { $0.count >= 3 }
+
+        var terms = Set(words)
+        if normalized.contains("macbook") || normalized.contains("mac book") {
+            terms.formUnion(["mac", "macbook", "laptop"])
+        }
+        if normalized.contains("iphone") {
+            terms.formUnion(["phone", "iphone"])
+        }
+        return terms
     }
 
     // MARK: - Related moments (over the full frame set)

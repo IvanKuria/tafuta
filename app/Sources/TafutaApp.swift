@@ -13,16 +13,17 @@ struct TafutaApp: App {
     init() { AppFonts.register() }
 
     var body: some Scene {
-        // Single-instance window — `openWindow(id:"main")` focuses it instead of spawning a
-        // second copy (a WindowGroup would duplicate the window).
+        // Single-instance Window (NOT WindowGroup) — otherwise openWindow(id:"main") from the
+        // launcher spawns a brand-new window each time instead of focusing the existing one.
         Window("Tafuta", id: "main") {
             MainWindow()
                 .environmentObject(search)
-                .frame(minWidth: 820, minHeight: 560)
+                .frame(minWidth: 920, minHeight: 620)
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1040, height: 700)
+        .defaultSize(width: 1280, height: 820)
         .defaultPosition(.center)
+        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(after: .newItem) {
                 Button("Quick Search…") { NSApp.activate(ignoringOtherApps: true) }
@@ -36,7 +37,9 @@ struct TafutaApp: App {
                 .environmentObject(search)
         }
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        // NOT .contentSize — that re-adds the hidden title-bar height to the window frame, leaving
+        // a transparent strip. We size the window ourselves in LauncherWindowConfigurator.
+        .windowResizability(.contentMinSize)
         .defaultPosition(.center)
 
         MenuBarExtra("Tafuta", systemImage: "magnifyingglass") {

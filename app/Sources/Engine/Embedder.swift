@@ -30,16 +30,20 @@ final class Embedder {
         tokenizer = tok
     }
 
+    private func l2(_ v: [Float]) -> [Float] {
+        var sumSq: Float = 0
+        for x in v { sumSq += x * x }
+        let inv = 1 / max(sumSq.squareRoot(), 1e-8)
+        return v.map { $0 * inv }
+    }
+
     private func normalizedEmbedding(_ provider: MLFeatureProvider) -> [Float] {
         let arr = provider.featureValue(for: "final_emb_1")!.multiArrayValue!
         let n = arr.count
         let ptr = arr.dataPointer.assumingMemoryBound(to: Float32.self)
         var v = [Float](repeating: 0, count: n)
-        var sumSq: Float = 0
-        for i in 0..<n { v[i] = ptr[i]; sumSq += ptr[i] * ptr[i] }
-        let inv = 1 / max(sumSq.squareRoot(), 1e-8)
-        for i in 0..<n { v[i] *= inv }
-        return v
+        for i in 0..<n { v[i] = ptr[i] }
+        return l2(v)
     }
 
     func embed(image cg: CGImage) throws -> [Float] {
@@ -55,6 +59,23 @@ final class Embedder {
         for i in 0..<ids.count { ptr[i] = ids[i] }
         let input = try MLDictionaryFeatureProvider(dictionary: ["text": MLFeatureValue(multiArray: arr)])
         return normalizedEmbedding(try textModel.prediction(from: input))
+    }
+
+    static let zeroShotTemplates = [
+        "a photo of a {}.", "a photo of the {}.", "a cropped photo of a {}.",
+        "a close-up photo of a {}.", "a bright photo of a {}.",
+        "a photo of many {}.", "a video frame of a {}."
+    ]
+
+    func embed(text query: String, templates: [String]) throws -> [Float] {
+        guard !templates.isEmpty else { return try embed(text: query) }
+        var acc = [Float](repeating: 0, count: 512)
+        for t in templates {
+            let prompt = t.replacingOccurrences(of: "{}", with: query)
+            let e = try embed(text: prompt)            // each already L2-normalized
+            for i in 0..<512 { acc[i] += e[i] }
+        }
+        return l2(acc)                                  // mean of unit vectors, renormalized
     }
 
     static func cosine(_ a: [Float], _ b: [Float]) -> Float {
