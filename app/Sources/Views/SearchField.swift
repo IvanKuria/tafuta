@@ -39,14 +39,18 @@ struct SearchField: View {
         }
         .padding(.horizontal, Space.m)
         .padding(.vertical, vPad)
+        // Large (launcher) = an elevated field inside the palette. Small (main window top bar)
+        // = boxless: just icon + text on the canvas, so the top flows into the content.
         .background(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(large ? Color.bgSurface : Color.bgInset)
+                .fill(large ? Color.bgSurface : Color.clear)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(focused ? Color.brand : Color.borderDefault, lineWidth: focused ? 1.5 : 1)
-        )
+        .overlay {
+            if large {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(focused ? Color.brand : Color.borderDefault, lineWidth: focused ? 1.5 : 1)
+            }
+        }
         .animation(Motion.quick, value: focused)
         .onAppear { text = search.query; focused = true }
         // Reflect external query changes (example / recent chips) back into the field.

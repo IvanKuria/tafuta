@@ -28,17 +28,14 @@ struct TopBar: View {
         .padding(.horizontal, Space.m)
         .frame(height: barHeight)
         .frame(maxWidth: .infinity)
-        // Draggable backing behind the vibrancy, so empty areas move the window;
-        // interactive controls layered above still receive clicks.
+        // Same canvas as the content — the top bar flows seamlessly into the grid (no header
+        // band, no divider). Canvas paints the black; the drag backing (click-through canvas on
+        // top) lets empty areas move the window.
         .background {
             ZStack {
                 WindowDragArea()
-                VisualEffectView(material: .headerView, blending: .withinWindow)
-                    .allowsHitTesting(false)
+                Color.bgCanvas.allowsHitTesting(false)
             }
-        }
-        .overlay(alignment: .bottom) {
-            Divider().overlay(Color.borderSubtle)
         }
     }
 
