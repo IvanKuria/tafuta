@@ -133,15 +133,43 @@ final class SearchCore: ObservableObject {
 
     // MARK: - Search
 
-    func runSearch() {
+    private var searchGen = 0
+
+    // Text search runs entirely OFF the main thread (embed + cosine over all frames), so typing
+    // in the launcher / main window never blocks the UI. Stale runs are dropped via a generation token.
+    func runSearch(record: Bool = false) {
         similarLabel = nil
         inspectorMoment = nil            // a fresh search closes the preview
-        guard hasQuery, let embedder else { results = []; queryVector = nil; selectedID = nil; return }
-        queryVector = try? embedder.embed(text: query)
-        rank()
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty, let embedder else { results = []; queryVector = nil; selectedID = nil; return }
+        searchGen += 1
+        let gen = searchGen
+        let threshold = Float(strictness)
+        let snaps = frames.map { ($0.id, $0.vector) }
+
+        Task.detached(priority: .userInitiated) {
+            guard let qv = try? embedder.embed(text: q) else { return }
+            let top = snaps.map { ($0.0, Embedder.cosine(qv, $0.1)) }
+                .filter { $0.1 >= threshold }
+                .sorted { $0.1 > $1.1 }
+                .prefix(60)
+            let ids = top.map(\.0)
+            let scoreByID = Dictionary(top.map { ($0.0, Double($0.1)) }, uniquingKeysWith: { a, _ in a })
+            await MainActor.run {
+                guard gen == self.searchGen else { return }   // a newer query superseded this one
+                self.queryVector = qv
+                let byID = Dictionary(self.frames.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+                let ranked = ids.compactMap { id -> SearchResult? in
+                    byID[id].map { SearchResult(frame: $0, score: scoreByID[id] ?? 0) }
+                }
+                withAnimation(Motion.standard) { self.results = ranked }
+                self.selectedID = ranked.first?.id
+                if record, !ranked.isEmpty { self.addRecent(q) }
+            }
+        }
     }
 
-    func runExample(_ q: String) { query = q; runSearch() }
+    func runExample(_ q: String) { query = q; runSearch(record: true) }
 
     private func rank() {
         guard let qv = queryVector else { results = []; selectedID = nil; return }

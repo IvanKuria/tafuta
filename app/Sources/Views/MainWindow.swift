@@ -7,6 +7,10 @@ struct MainWindow: View {
     @EnvironmentObject var search: SearchCore
     @Environment(\.openWindow) private var openWindow
 
+    private var selectedResult: SearchResult? {
+        search.results.first { $0.id == search.selectedID }
+    }
+
     // Inspector presentation derives from the selected moment.
     private var inspectorShown: Binding<Bool> {
         Binding(get: { search.inspectorMoment != nil },
@@ -23,6 +27,12 @@ struct MainWindow: View {
                             .inspectorColumnWidth(min: 320, ideal: 380, max: 560)
                     }
                 }
+            if let r = selectedResult {
+                ActionBar(appGlyph: "film",
+                          contextTitle: r.videoName,
+                          primary: MomentActions.primary(r, search),
+                          actions: MomentActions.all(r, search))
+            }
         }
         .frame(minWidth: 720, minHeight: 480)
         .background(Color.bgCanvas)

@@ -17,12 +17,7 @@ struct ResultsView: View {
             selected: result.id == search.selectedID,
             onSelect: { search.select(result) },
             onPlay: { search.select(result); search.playInline() },
-            onFindSimilar: { search.findSimilar(to: result) },
-            onExport: { search.exportClip(result) },
-            onSaveFrame: { search.saveFrame(result) },
-            onCopyLink: { search.copyLink(result) },
-            onReveal: { search.reveal(result) },
-            onRemove: { search.removeFromIndex(result) }
+            actions: MomentActions.all(result, search)
         )
         .equatable()
         .id(result.id)
@@ -201,7 +196,7 @@ struct EmptyState: View {
             if let err = search.loadError {
                 icon("exclamationmark.triangle"); title("Couldn’t load the search model"); subtitle(err)
             } else if !search.hasIndex {
-                IconChip(systemName: "sparkle.magnifyingglass", tint: .brand, size: 64)
+                IconChip(systemName: "film.stack", tint: .brand, size: 64)
                 title(search.isIndexing ? "Indexing your videos…" : "Add your videos")
                 subtitle(search.isIndexing
                          ? "You can search as soon as the first results come in."
@@ -214,7 +209,7 @@ struct EmptyState: View {
                 icon("magnifyingglass"); title("No matches")
                 subtitle("Try a broader description, or lower the match precision.")
             } else {
-                icon("sparkle.magnifyingglass"); title("Search inside your videos")
+                icon("rectangle.and.text.magnifyingglass"); title("Search inside your videos")
                 subtitle("Describe a moment and Tafuta finds it. Try one:")
                 FlowExamples(examples: search.examples) { search.runExample($0) }
                     .frame(maxWidth: 460)

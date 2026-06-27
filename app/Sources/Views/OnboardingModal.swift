@@ -55,7 +55,7 @@ struct OnboardingModal: View {
 
     private var card: some View {
         VStack(spacing: Space.l) {
-            IconChip(systemName: "sparkle.magnifyingglass", tint: .brand, size: 64)
+            IconChip(systemName: "film.stack", tint: .brand, size: 64)
                 .scaleEffect(pulse ? 1.06 : 1.0)
 
             VStack(spacing: Space.s) {

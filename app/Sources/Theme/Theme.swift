@@ -33,10 +33,11 @@ enum Space {
 // Continuous (squircle) radii — one consistent family across the whole app.
 // tag = tiny tags; control = fields/buttons/thumbnails; card = result cards; sheet = panels.
 enum Radius {
-    static let tag:     CGFloat = 6
-    static let control: CGFloat = 8
-    static let card:    CGFloat = 12
-    static let sheet:   CGFloat = 16
+    static let tag:     CGFloat = 4    // keycap / badge
+    static let row:     CGFloat = 6    // command-palette rows
+    static let control: CGFloat = 8    // buttons / inputs / tiles / thumbnails
+    static let card:    CGFloat = 10
+    static let sheet:   CGFloat = 16   // launcher / panels
 }
 
 // Fast, non-bouncy motion + one signature spring for "arrival" moments.
@@ -47,14 +48,14 @@ enum Motion {
     static let gentle    = Animation.easeInOut(duration: 0.9)
 }
 
-// Named type ramp (Apple scale) so views stop hand-rolling sizes.
+// Type ramp on Inter (with ss03) — Raycast's typographic identity.
 enum Typo {
-    static let title   = Font.system(size: 22, weight: .bold)
-    static let title3  = Font.system(size: 15, weight: .semibold)
-    static let body    = Font.system(size: 13, weight: .regular)
-    static let callout = Font.system(size: 12, weight: .medium)
-    static let caption = Font.system(size: 11, weight: .medium)
-    static let mono    = Font.system(size: 11, weight: .semibold).monospacedDigit()
+    static let title   = Font.inter(22, .semibold)
+    static let title3  = Font.inter(15, .semibold)
+    static let body    = Font.inter(13, .regular)
+    static let callout = Font.inter(13, .medium)
+    static let caption = Font.inter(11, .medium)
+    static let mono    = Font.inter(11, .semibold).monospacedDigit()
 }
 
 extension View {

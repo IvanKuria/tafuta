@@ -9,19 +9,22 @@ ASSETS = os.path.join(os.path.dirname(__file__), "..", "app", "Resources", "Asse
 
 # token: (light_hex, light_alpha, dark_hex, dark_alpha)
 # Borders are opacity-based (white in dark / black in light) — the Linear trick.
+# Raycast surface ladder (dark, from their design tokens) + a parallel designed light ladder.
 TOKENS = {
-    "AccentColor":       ("#2C2C2E", 1.0,  "#E8E9EC", 1.0),  # near-monochrome graphite ink
-    "BgCanvas":          ("#FBFBFB", 1.0,  "#08090A", 1.0),
-    "BgSurface":         ("#FFFFFF", 1.0,  "#0F1011", 1.0),
-    "BgSurfaceElevated": ("#FFFFFF", 1.0,  "#161719", 1.0),
-    "BgInset":           ("#F4F5F6", 1.0,  "#0B0C0D", 1.0),
-    "BorderSubtle":      ("#000000", 0.06, "#FFFFFF", 0.06),
-    "BorderDefault":     ("#000000", 0.10, "#FFFFFF", 0.10),
+    # Primary action = inverse ink (white-on-black dark / black-on-white light), like Raycast.
+    "AccentColor":       ("#1D1D1F", 1.0,  "#F4F4F6", 1.0),
+    "AccentFg":          ("#FFFFFF", 1.0,  "#07080A", 1.0),
+    # Surface ladder: canvas → surface → elevated → inset(card). Depth via color, not shadow.
+    "BgCanvas":          ("#F6F6F7", 1.0,  "#07080A", 1.0),
+    "BgSurface":         ("#FFFFFF", 1.0,  "#0D0D0D", 1.0),
+    "BgSurfaceElevated": ("#FFFFFF", 1.0,  "#101111", 1.0),
+    "BgInset":           ("#ECECEE", 1.0,  "#121212", 1.0),  # active row / field / keycap fill
+    "BorderSubtle":      ("#000000", 0.06, "#FFFFFF", 0.08),
+    "BorderDefault":     ("#000000", 0.10, "#242728", 1.0),  # Raycast hairline
     "BorderStrong":      ("#000000", 0.16, "#FFFFFF", 0.16),
-    "TextPrimary":       ("#16171A", 1.0,  "#F7F8F8", 1.0),
-    "TextSecondary":     ("#5C5F66", 1.0,  "#9CA0A8", 1.0),
-    "TextTertiary":      ("#8A8D93", 1.0,  "#62666D", 1.0),
-    "AccentFg":          ("#FFFFFF", 1.0,  "#0B0C0D", 1.0),
+    "TextPrimary":       ("#1D1D1F", 1.0,  "#F4F4F6", 1.0),  # ink
+    "TextSecondary":     ("#6E6E73", 1.0,  "#9C9C9D", 1.0),  # mute
+    "TextTertiary":      ("#A1A1A6", 1.0,  "#6A6B6C", 1.0),  # ash
 }
 
 def comp(hex6, alpha):

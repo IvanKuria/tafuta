@@ -2,43 +2,38 @@ import SwiftUI
 import AVKit
 import AVFoundation
 
-// Native Inspector slide-out preview for a selected video "moment".
-// Monochrome + single blue accent, pills for metadata, soft shadows on floating layers only.
+// Raycast Detail-style inspector for a selected video "moment".
+// Surface-color depth, hairlines, Inter, keycaps, no drop shadows on chrome.
 struct MomentInspector: View {
     let moment: SearchResult
     @EnvironmentObject var search: SearchCore
 
     @State private var player = AVPlayer()
-    @State private var sameVideo: [SearchResult] = []
-    @State private var similarMoments: [SearchResult] = []
+    @State private var related: [SearchResult] = []
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.l) {
-                hero
-                titleBlock
-                actionBar
-                rail(title: "More from this video", items: sameVideo)
-                rail(title: "Similar moments", items: similarMoments)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.l) {
+                    hero
+                    title
+                    metadata
+                    relatedSection
+                }
+                .padding(Space.l)
             }
-            .padding(Space.l)
+
+            ActionBar(
+                appGlyph: "film",
+                contextTitle: moment.videoName,
+                primary: MomentActions.primary(moment, search),
+                actions: MomentActions.all(moment, search)
+            )
         }
         .task(id: moment.id) {
-            let (same, sim) = await search.relatedMoments(to: moment)
-            sameVideo = same
-            similarMoments = sim
+            let (_, sim) = await search.relatedMoments(to: moment)
+            related = sim
         }
-        .onAppear {
-            loadCurrentMoment()
-            if search.isPlayingInline { player.play() }
-        }
-        .onChange(of: moment.id) { _, _ in
-            loadCurrentMoment()
-        }
-        .onChange(of: search.isPlayingInline) { _, playing in
-            if playing { player.play() } else { player.pause() }
-        }
-        .onDisappear { player.pause() }
     }
 
     // MARK: - AVPlayer lifecycle
@@ -61,39 +56,45 @@ struct MomentInspector: View {
         }
         .aspectRatio(16.0 / 9.0, contentMode: .fit)
         .frame(maxWidth: .infinity)
-        .background(Color.bgInset)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                .strokeBorder(Color.borderDefault, lineWidth: 1)
         )
+        .onAppear {
+            loadCurrentMoment()
+            if search.isPlayingInline { player.play() }
+        }
+        .onChange(of: moment.id) { _, _ in
+            loadCurrentMoment()
+        }
+        .onChange(of: search.isPlayingInline) { _, playing in
+            if playing { player.play() } else { player.pause() }
+        }
+        .onDisappear { player.pause() }
     }
 
     private var thumbnailHero: some View {
-        GeometryReader { geo in
-            Image(nsImage: moment.thumbnail)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: geo.size.width, height: geo.size.height)
-                .clipped()
-                .overlay(
-                    Button { search.playInline() } label: {
-                        Image(systemName: "play.circle.fill")
-                            .font(.system(size: 56, weight: .regular))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(.white)
-                            .softShadow(2)
-                    }
-                    .buttonStyle(.plain)
-                )
-                .overlay(alignment: .bottomTrailing) {
-                    HStack(spacing: Space.xs) {
-                        badge(moment.timecode)
-                        if !moment.durationLabel.isEmpty { badge(moment.durationLabel) }
-                    }
-                    .padding(Space.s)
+        Image(nsImage: moment.thumbnail)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .clipped()
+            .overlay {
+                Button { search.playInline() } label: {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 56, weight: .regular))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.white)
                 }
-        }
+                .buttonStyle(.plain)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                HStack(spacing: Space.xs) {
+                    badge(moment.timecode)
+                    if !moment.durationLabel.isEmpty { badge(moment.durationLabel) }
+                }
+                .padding(Space.s)
+            }
     }
 
     private func badge(_ text: String) -> some View {
@@ -102,109 +103,52 @@ struct MomentInspector: View {
             .foregroundStyle(.white)
             .padding(.horizontal, Space.s)
             .padding(.vertical, 3)
-            .background(Color.black.opacity(0.6), in: Capsule())
+            .background(Color.black.opacity(0.55), in: Capsule())
     }
 
     // MARK: - Title
 
-    private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            Text(moment.videoName)
-                .font(Typo.title3)
-                .foregroundStyle(Color.textPrimary)
-                .lineLimit(2)
-            Button { search.reveal(moment) } label: {
-                HStack(spacing: Space.xs) {
-                    Image(systemName: "folder")
-                    Text(moment.prettyPath)
-                }
+    private var title: some View {
+        Text(moment.videoName)
+            .font(Typo.title3)
+            .foregroundStyle(Color.textPrimary)
+            .lineLimit(2)
+    }
+
+    // MARK: - Metadata
+
+    private var metadata: some View {
+        DetailMetadata(pairs: [
+            ("Location", moment.prettyPath),
+            ("Duration", moment.durationLabel),
+            ("Timestamp", moment.timecode),
+            ("Match", "\(Int(moment.normalizedScore * 100))%")
+        ])
+    }
+
+    // MARK: - Related
+
+    private var relatedSection: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text("RELATED")
                 .font(Typo.caption)
                 .foregroundStyle(Color.textTertiary)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - Action bar
-
-    private var actionBar: some View {
-        HStack(spacing: Space.m) {
-            actionButton("play.fill", help: "Play / pause") { search.togglePlayInline() }
-            actionButton("square.on.square", help: "Find similar moments") { search.findSimilar(to: moment) }
-            actionButton("scissors", help: "Export clip") { search.exportClip(moment) }
-            actionButton("photo", help: "Save frame") { search.saveFrame(moment) }
-            actionButton("link", help: "Copy timestamp link") { search.copyLink(moment) }
-            actionButton("folder", help: "Reveal in Finder") { search.reveal(moment) }
-            actionButton("trash", help: "Remove from index", tint: .red) { search.removeFromIndex(moment) }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Space.l)
-        .padding(.vertical, Space.s)
-        .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-        .softShadow(2)
-    }
-
-    private func actionButton(_ symbol: String,
-                              help: String,
-                              tint: Color = .textPrimary,
-                              action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(help)
-    }
-
-    // MARK: - Related rails
-
-    @ViewBuilder
-    private func rail(title: String, items: [SearchResult]) -> some View {
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: Space.s) {
-                Text(title.uppercased())
-                    .font(Typo.caption)
-                    .tracking(0.6)
-                    .foregroundStyle(Color.textTertiary)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: Space.s) {
-                        ForEach(items) { item in
-                            railItem(item)
-                        }
+            VStack(spacing: 0) {
+                ForEach(related.prefix(6)) { item in
+                    Button { search.inspect(item) } label: {
+                        CommandRow(
+                            thumbnail: item.thumbnail,
+                            icon: nil,
+                            title: item.videoName,
+                            subtitle: item.timecode,
+                            accessories: [],
+                            trailingKey: nil,
+                            selected: item.id == moment.id
+                        )
                     }
-                    .padding(.vertical, 2)
+                    .buttonStyle(.plain)
                 }
             }
         }
-    }
-
-    private func railItem(_ item: SearchResult) -> some View {
-        let isCurrent = item.id == moment.id
-        return Button { search.inspect(item) } label: {
-            Image(nsImage: item.thumbnail)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 120, height: 68)
-                .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                .overlay(alignment: .bottomTrailing) {
-                    Text(item.timecode)
-                        .font(Typo.mono)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(Color.black.opacity(0.6), in: Capsule())
-                        .padding(Space.xs)
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                        .strokeBorder(isCurrent ? Color.brand : Color.borderSubtle,
-                                      lineWidth: isCurrent ? 2 : 1)
-                )
-        }
-        .buttonStyle(.plain)
     }
 }

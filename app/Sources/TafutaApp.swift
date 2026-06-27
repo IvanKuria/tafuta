@@ -10,6 +10,8 @@ extension KeyboardShortcuts.Name {
 struct TafutaApp: App {
     @StateObject private var search = SearchCore()
 
+    init() { AppFonts.register() }
+
     var body: some Scene {
         WindowGroup(id: "main") {
             MainWindow()
@@ -35,7 +37,7 @@ struct TafutaApp: App {
         .windowResizability(.contentSize)
         .defaultPosition(.center)
 
-        MenuBarExtra("Tafuta", systemImage: "sparkle.magnifyingglass") {
+        MenuBarExtra("Tafuta", systemImage: "magnifyingglass") {
             MenuBarView()
                 .environmentObject(search)
         }

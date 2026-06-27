@@ -36,5 +36,6 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+        INFOPLIST_KEY_ATSApplicationFontsPath: Fonts
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Ivan Kuria. GPLv3."
         COMBINE_HIDPI_IMAGES: YES
