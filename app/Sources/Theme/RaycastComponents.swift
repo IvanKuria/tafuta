@@ -104,7 +104,7 @@ struct ActionPanel: View {
         }
         .padding(Space.s)
         .frame(width: 280)
-        .background(Color.bgSurfaceElevated)
+        .background(.ultraThinMaterial)
     }
 }
 
@@ -214,7 +214,7 @@ struct ActionBar: View {
         }
         .frame(height: 40)
         .padding(.horizontal, Space.m)
-        .background(Color.bgSurfaceElevated)
+        .background(.ultraThinMaterial)
         .overlay(alignment: .top) {
             Rectangle().fill(Color.borderDefault).frame(height: 1)
         }

@@ -183,7 +183,7 @@ struct VideoSectionHeader: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onToggle)
         .padding(.horizontal, Space.l).padding(.vertical, Space.s)
-        .background(Color.bgCanvas.opacity(0.92))
+        .background(.ultraThinMaterial)
     }
 }
 

@@ -39,7 +39,7 @@ struct LauncherView: View {
                           actions: launcherActions)
             }
             .frame(width: 640)
-            .background(Color.bgSurfaceElevated,
+            .background(.ultraThinMaterial,
                         in: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous)
