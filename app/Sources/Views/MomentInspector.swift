@@ -12,23 +12,16 @@ struct MomentInspector: View {
     @State private var related: [SearchResult] = []
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.l) {
-                    hero
-                    title
-                    metadata
-                    relatedSection
-                }
-                .padding(Space.l)
+        // No ActionBar here — the single global ActionBar lives at the bottom of the main window
+        // and reflects the inspected moment (avoids duplicate Play / ⌘K controls).
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.l) {
+                hero
+                title
+                metadata
+                relatedSection
             }
-
-            ActionBar(
-                appGlyph: "film",
-                contextTitle: moment.videoName,
-                primary: MomentActions.primary(moment, search),
-                actions: MomentActions.all(moment, search)
-            )
+            .padding(Space.l)
         }
         .task(id: moment.id) {
             let (_, sim) = await search.relatedMoments(to: moment)

@@ -27,7 +27,7 @@ struct MainWindow: View {
                             .inspectorColumnWidth(min: 320, ideal: 380, max: 560)
                     }
                 }
-            if let r = selectedResult {
+            if let r = search.inspectorMoment ?? selectedResult {
                 ActionBar(appGlyph: "film",
                           contextTitle: r.videoName,
                           primary: MomentActions.primary(r, search),

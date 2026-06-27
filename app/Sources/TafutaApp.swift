@@ -13,7 +13,9 @@ struct TafutaApp: App {
     init() { AppFonts.register() }
 
     var body: some Scene {
-        WindowGroup(id: "main") {
+        // Single-instance window — `openWindow(id:"main")` focuses it instead of spawning a
+        // second copy (a WindowGroup would duplicate the window).
+        Window("Tafuta", id: "main") {
             MainWindow()
                 .environmentObject(search)
                 .frame(minWidth: 820, minHeight: 560)
