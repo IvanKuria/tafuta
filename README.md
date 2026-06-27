@@ -103,9 +103,10 @@ accelerated indexing. The local search experience is and remains free.
 
 ## Contributing
 
-Contributions are welcome. Please open an issue to discuss substantial changes before sending a
-pull request. Build the project from source as described above, keep changes focused, and match
-the existing code style.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup,
+project structure, architecture overview, and pull request guidelines. In short: build from
+source as described above, keep changes focused, match the existing code style, and open an
+issue to discuss substantial changes first.
 
 ## License
 
