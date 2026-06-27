@@ -26,7 +26,7 @@ struct ResultsView: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.bgCanvas)
+            .background(Color.clear)   // let the window's frosted vibrancy show through
             .dropDestination(for: URL.self) { urls, _ in
                 search.indexURLs(urls); return true
             } isTargeted: { dropTargeted = $0 }

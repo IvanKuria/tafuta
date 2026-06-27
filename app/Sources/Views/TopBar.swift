@@ -31,12 +31,7 @@ struct TopBar: View {
         // Same canvas as the content — the top bar flows seamlessly into the grid (no header
         // band, no divider). Canvas paints the black; the drag backing (click-through canvas on
         // top) lets empty areas move the window.
-        .background {
-            ZStack {
-                WindowDragArea()
-                Color.bgCanvas.allowsHitTesting(false)
-            }
-        }
+        .background(WindowDragArea())   // drag backing; the window's frosted vibrancy shows through
     }
 
     // MARK: - Status pill

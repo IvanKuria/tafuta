@@ -35,7 +35,9 @@ struct MainWindow: View {
             }
         }
         .frame(minWidth: 720, minHeight: 480)
-        .background(Color.bgCanvas)
+        // Semi-translucent frosted base (desktop shows through subtly) — not solid black.
+        .background(VisualEffectView(material: .underWindowBackground, blending: .behindWindow).ignoresSafeArea())
+        .background(WindowConfigurator())
         .tint(Color.brand)
         .toastOverlay(search.toast)
         .overlay { OnboardingModal() }
