@@ -30,3 +30,11 @@ mcpmarket-me/
 
 # XcodeGen-generated project (regenerate with `xcodegen generate`)
 *.xcodeproj/
+
+# Local agent/skill tooling (not part of the project)
+.agents/
+.claude/
+skills-lock.json
+
+# Release packaging output
+dist/
